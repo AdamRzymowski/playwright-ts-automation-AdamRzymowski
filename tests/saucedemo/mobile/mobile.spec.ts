@@ -1,6 +1,6 @@
 import * as allure from 'allure-js-commons';
-import { test, expect } from '../../fixtures/test';
-import { PRODUCTS } from '../utils/testData';
+import { test, expect } from '../../../fixtures/saucedemo';
+import { PRODUCTS } from '../../utils/testData';
 
 test.describe('Mobile view', () => {
   test.beforeEach(async () => {

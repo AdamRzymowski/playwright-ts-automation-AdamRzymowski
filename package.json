@@ -18,7 +18,9 @@
     "allure:generate": "allure generate allure-results",
     "allure:open": "allure open allure-report",
     "allure": "allure generate allure-results --open",
-    "allure:clean": "node -e \"for (const d of ['allure-results','allure-report']) require('fs').rmSync(d,{recursive:true,force:true})\""
+    "allure:clean": "node -e \"for (const d of ['allure-results','allure-report']) require('fs').rmSync(d,{recursive:true,force:true})\"",
+    "test:saucedemo": "playwright test tests/saucedemo",
+    "test:monsters": "playwright test tests/monsters"
   },
   "keywords": [],
   "author": "",

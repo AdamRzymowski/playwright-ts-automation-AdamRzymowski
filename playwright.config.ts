@@ -1,8 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import { MONSTERS_DIR, MONSTERS_PORT, MONSTERS_URL, SAUCEDEMO_URL } from './sites';
 
 /**
- * Demo target: https://www.saucedemo.com (public e-commerce practice site).
- * Override with BASE_URL=... to point the suite elsewhere.
+ * Sites under test (URLs in sites.ts):
+ * - tests/saucedemo/  https://www.saucedemo.com, public e-commerce practice site (BASE_URL to override)
+ * - tests/monsters/   Substandard Monsters website, served from the local ../Substandard-Monsters
+ *                     folder (MONSTERS_DIR / MONSTERS_URL to override)
  *
  * Browsers run side by side: every desktop spec runs once per desktop project, every
  * mobile spec once per mobile project, spread across parallel workers.
@@ -10,8 +13,8 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * See https://playwright.dev/docs/test-configuration.
  */
-const DESKTOP_SPECS = /tests[\\/]e2e[\\/].*\.spec\.ts/;
-const MOBILE_SPECS = /tests[\\/]mobile[\\/].*\.spec\.ts/;
+const DESKTOP_SPECS = /[\\/]e2e[\\/].*\.spec\.ts$/;
+const MOBILE_SPECS = /[\\/]mobile[\\/].*\.spec\.ts$/;
 
 export default defineConfig({
   testDir: './tests',
@@ -35,7 +38,8 @@ export default defineConfig({
         detail: true,
         suiteTitle: true,
         environmentInfo: {
-          Site: process.env.BASE_URL ?? 'https://www.saucedemo.com',
+          'Saucedemo URL': SAUCEDEMO_URL,
+          'Monsters URL': MONSTERS_URL,
           Node: process.version,
           OS: process.platform,
         },
@@ -44,7 +48,8 @@ export default defineConfig({
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    baseURL: process.env.BASE_URL ?? 'https://www.saucedemo.com',
+    /* Default site; Monsters specs override this in fixtures/monsters.ts. */
+    baseURL: SAUCEDEMO_URL,
     /* saucedemo marks elements with data-test="...", so getByTestId() reads that attribute. */
     testIdAttribute: 'data-test',
     /* Headless by default; `npm run test:headed` or `npm run test:ui` to watch. */
@@ -85,4 +90,13 @@ export default defineConfig({
       use: { ...devices['Pixel 7'], channel: 'msedge' },
     },
   ],
+
+  /* Host the local Substandard Monsters folder while tests run (skipped when MONSTERS_URL is set). */
+  webServer: process.env.MONSTERS_URL
+    ? undefined
+    : {
+        command: `node tools/serve-static.mjs "${MONSTERS_DIR}" ${MONSTERS_PORT}`,
+        url: MONSTERS_URL,
+        reuseExistingServer: !process.env.CI,
+      },
 });

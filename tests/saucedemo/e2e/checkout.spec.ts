@@ -1,7 +1,7 @@
 import * as allure from 'allure-js-commons';
-import { test, expect } from '../../fixtures/test';
-import { CheckoutPage } from '../../pages/CheckoutPage';
-import { PRODUCTS, createShippingInfo } from '../utils/testData';
+import { test, expect } from '../../../fixtures/saucedemo';
+import { CheckoutPage } from '../../../pages/saucedemo/CheckoutPage';
+import { PRODUCTS, createShippingInfo } from '../../utils/testData';
 
 test.describe('Checkout', () => {
   test.beforeEach(async () => {

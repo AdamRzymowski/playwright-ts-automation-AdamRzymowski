@@ -1,6 +1,6 @@
 import * as allure from 'allure-js-commons';
-import { test, expect } from '../../fixtures/test';
-import { PASSWORD, USERS } from '../utils/testData';
+import { test, expect } from '../../../fixtures/saucedemo';
+import { PASSWORD, USERS } from '../../utils/testData';
 
 test.describe('Login', () => {
   test.beforeEach(async ({ loginPage }) => {
