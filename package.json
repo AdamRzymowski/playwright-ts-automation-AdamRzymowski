@@ -8,13 +8,16 @@
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
     "report": "playwright show-report",
-    "codegen": "playwright codegen"
+    "codegen": "playwright codegen",
+    "test:chrome": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5"
   }
