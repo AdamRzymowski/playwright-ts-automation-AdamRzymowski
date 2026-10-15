@@ -1,26 +1,25 @@
 import { faker } from '@faker-js/faker';
+import type { ShippingInfo } from '../../pages/CheckoutPage';
 
-export type User = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-};
+/** Public demo accounts listed on the saucedemo.com login page (not real credentials). */
+export const USERS = {
+  standard: 'standard_user',
+  lockedOut: 'locked_out_user',
+} as const;
+export const PASSWORD = 'secret_sauce';
 
-/** Builds a random user; pass overrides to pin specific fields. */
-export function createUser(overrides: Partial<User> = {}): User {
-  const firstName = faker.person.firstName();
-  const lastName = faker.person.lastName();
+export const PRODUCTS = {
+  backpack: 'Sauce Labs Backpack',
+  bikeLight: 'Sauce Labs Bike Light',
+  boltTShirt: 'Sauce Labs Bolt T-Shirt',
+} as const;
+
+/** Builds random checkout details; pass overrides to pin specific fields. */
+export function createShippingInfo(overrides: Partial<ShippingInfo> = {}): ShippingInfo {
   return {
-    firstName,
-    lastName,
-    email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-    password: faker.internet.password({ length: 12 }),
+    firstName: faker.person.firstName(),
+    lastName: faker.person.lastName(),
+    postalCode: faker.location.zipCode(),
     ...overrides,
   };
-}
-
-/** Builds a list of short random task titles. */
-export function createTodos(count = 3): string[] {
-  return Array.from({ length: count }, () => faker.lorem.sentence({ min: 2, max: 5 }));
 }

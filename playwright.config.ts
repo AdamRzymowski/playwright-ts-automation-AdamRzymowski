@@ -1,80 +1,88 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-/**
+ * Demo target: https://www.saucedemo.com (public e-commerce practice site).
+ * Override with BASE_URL=... to point the suite elsewhere.
+ *
+ * Browsers run side by side: every desktop spec runs once per desktop project, every
+ * mobile spec once per mobile project, spread across parallel workers.
+ * Playwright drives its own browsers, so no chromedriver/geckodriver/msedgedriver is needed.
+ *
  * See https://playwright.dev/docs/test-configuration.
  */
+const DESKTOP_SPECS = /tests[\\/]e2e[\\/].*\.spec\.ts/;
+const MOBILE_SPECS = /tests[\\/]mobile[\\/].*\.spec\.ts/;
+
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './global-setup.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  /* Parallel workers: Playwright picks half the CPU cores locally; cap it on CI. */
+  workers: process.env.CI ? 4 : undefined,
+  /* list = console output, html = Playwright report, allure = graphical dashboard (npm run allure) */
+  reporter: [
+    ['list'],
+    ['html', { open: 'never' }],
+    [
+      'allure-playwright',
+      {
+        resultsDir: 'allure-results',
+        detail: true,
+        suiteTitle: true,
+        environmentInfo: {
+          Site: process.env.BASE_URL ?? 'https://www.saucedemo.com',
+          Node: process.version,
+          OS: process.platform,
+        },
+      },
+    ],
+  ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    baseURL: process.env.BASE_URL ?? 'https://www.saucedemo.com',
+    /* saucedemo marks elements with data-test="...", so getByTestId() reads that attribute. */
+    testIdAttribute: 'data-test',
+    /* Headless by default; `npm run test:headed` or `npm run test:ui` to watch. */
+    headless: true,
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    trace: 'retain-on-failure',
   },
 
-  /* Chrome and Firefox run side by side: each test runs once per project, spread across workers.
-   * Playwright drives its own bundled browsers directly, so no chromedriver/geckodriver is needed. */
   projects: [
+    /* Desktop browsers */
     {
       name: 'chromium',
+      testMatch: DESKTOP_SPECS,
       use: { ...devices['Desktop Chrome'] },
     },
-
     {
       name: 'firefox',
+      testMatch: DESKTOP_SPECS,
       use: { ...devices['Desktop Firefox'] },
     },
+    {
+      /* Uses the Microsoft Edge installed on this machine. */
+      name: 'edge',
+      testMatch: DESKTOP_SPECS,
+      use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    },
 
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
+    /* Mobile emulation (viewport, touch, mobile user agent). Firefox has no mobile emulation. */
+    {
+      name: 'mobile-chrome',
+      testMatch: MOBILE_SPECS,
+      use: { ...devices['Pixel 7'] },
+    },
+    {
+      name: 'mobile-edge',
+      testMatch: MOBILE_SPECS,
+      use: { ...devices['Pixel 7'], channel: 'msedge' },
+    },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });

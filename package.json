@@ -9,8 +9,16 @@
     "test:debug": "playwright test --debug",
     "report": "playwright show-report",
     "codegen": "playwright codegen",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:desktop": "playwright test --project=chromium --project=firefox --project=edge",
+    "test:mobile": "playwright test --project=mobile-chrome --project=mobile-edge",
     "test:chrome": "playwright test --project=chromium",
-    "test:firefox": "playwright test --project=firefox"
+    "test:firefox": "playwright test --project=firefox",
+    "test:edge": "playwright test --project=edge",
+    "allure:generate": "allure generate allure-results",
+    "allure:open": "allure open allure-report",
+    "allure": "allure generate allure-results --open",
+    "allure:clean": "node -e \"for (const d of ['allure-results','allure-report']) require('fs').rmSync(d,{recursive:true,force:true})\""
   },
   "keywords": [],
   "author": "",
@@ -19,6 +27,9 @@
   "devDependencies": {
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.64.1",
-    "@types/node": "^26.6.5"
+    "@types/node": "^26.6.5",
+    "allure": "^3.20.1",
+    "allure-js-commons": "^3.13.0",
+    "allure-playwright": "^3.13.0"
   }
 }

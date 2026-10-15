@@ -21,3 +21,8 @@ Thumbs.db
 
 # Logs
 npm-debug.log*
+
+# Allure
+/allure-results/
+/allure-report/
+/allure-history/
