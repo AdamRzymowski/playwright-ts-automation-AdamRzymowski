@@ -26,6 +26,11 @@ The request form is never really sent: every call to FormSubmit is blocked or mo
 The real-submission test (`tests/monsters/e2e/real-submit.spec.ts`) is skipped unless `SUBMIT_REAL_FORM=1`
 is set. Its data is marked `[AUTOMATED TEST - please ignore]`.
 
+Accessibility: `tests/monsters/*/accessibility.spec.ts` scan each page state with
+[axe-core](https://github.com/dequelabs/axe-core) against WCAG 2.0/2.1/2.2 level A and AA, and add keyboard,
+screen-reader label, focus, zoom and touch-target checks. Each scan attaches a readable summary to the
+Allure report. Run them with `npm run test:a11y`.
+
 Covered: page structure and nav, every image loads, no JavaScript errors, gallery tabs and Painting
 sub-tabs, service cards and `#gallery-...` links, lightbox, form success / validation / errors, the
 EN/PL switch and translations, EN/PL content staying in sync, and the mobile menu and layout.
@@ -61,13 +66,16 @@ Point saucedemo tests elsewhere with `BASE_URL`; Monsters tests with `MONSTERS_U
 
 | Command | What it does |
 | --- | --- |
+| `npm run report:full` | Run everything (Monsters on the live site) with a screenshot + video of every test, then build and open the Allure report |
 | `npm run allure` | Build the Allure report from the last run and open it |
 | `npm run allure:generate` | Build it into `allure-report/` without opening |
 | `npm run allure:open` | Serve an already built report |
 | `npm run report` | Open Playwright's built-in HTML report |
 
-The Allure report has two views: **Awesome** (tests grouped by epic / feature, with steps, screenshots,
-videos, traces and attachments) and **Dashboard** (status, severity and trend charts). Each run starts
+The Allure report opens on a start page with four views (set up in `allurerc.mjs`): **All tests**,
+**Desktop tests** and **Mobile tests** (lists grouped by platform / epic / feature, with steps, screenshots,
+videos, traces and attachments) and **Charts** (status, severity and trend charts). Every test is labelled
+Desktop or Mobile by `fixtures/base.ts`. Each run starts
 with empty `allure-results/`; run history is kept in `allure-history/`, so trend charts grow with every
 report you generate.
 

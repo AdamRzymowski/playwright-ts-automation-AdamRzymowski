@@ -22,13 +22,16 @@
     "test:saucedemo": "playwright test tests/saucedemo",
     "test:monsters": "playwright test tests/monsters",
     "test:monsters:live": "cross-env MONSTERS_URL=https://substandard-monsters.netlify.app playwright test tests/monsters",
-    "test:monsters:submit": "cross-env MONSTERS_URL=https://substandard-monsters.netlify.app SUBMIT_REAL_FORM=1 playwright test real-submit --project=chromium"
+    "test:monsters:submit": "cross-env MONSTERS_URL=https://substandard-monsters.netlify.app SUBMIT_REAL_FORM=1 playwright test real-submit --project=chromium",
+    "report:full": "node tools/report-full.mjs",
+    "test:a11y": "playwright test --grep @a11y"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5",

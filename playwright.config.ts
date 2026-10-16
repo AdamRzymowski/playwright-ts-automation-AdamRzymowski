@@ -54,8 +54,9 @@ export default defineConfig({
     testIdAttribute: 'data-test',
     /* Headless by default; `npm run test:headed` or `npm run test:ui` to watch. */
     headless: true,
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    /* Failures only by default; CAPTURE_ALL=1 (npm run report:full) keeps a screenshot and video of every test. */
+    screenshot: process.env.CAPTURE_ALL ? 'on' : 'only-on-failure',
+    video: process.env.CAPTURE_ALL ? 'on' : 'retain-on-failure',
     trace: 'retain-on-failure',
   },
 
