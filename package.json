@@ -24,7 +24,9 @@
     "test:monsters:live": "cross-env MONSTERS_URL=https://substandard-monsters.netlify.app playwright test tests/monsters",
     "test:monsters:submit": "cross-env MONSTERS_URL=https://substandard-monsters.netlify.app SUBMIT_REAL_FORM=1 playwright test real-submit --project=chromium",
     "report:full": "node tools/report-full.mjs",
-    "test:a11y": "playwright test --grep @a11y"
+    "test:a11y": "playwright test --grep @a11y",
+    "test:testiny": "cross-env TESTINY_UPLOAD=1 MONSTERS_URL=https://substandard-monsters.netlify.app playwright test",
+    "export:testiny": "node tools/export-testiny-csv.mjs"
   },
   "keywords": [],
   "author": "",
@@ -34,6 +36,7 @@
     "@axe-core/playwright": "^4.14.0",
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.64.1",
+    "@testiny/automation": "^1.42.0",
     "@types/node": "^26.6.5",
     "allure": "^3.20.1",
     "allure-js-commons": "^3.13.0",

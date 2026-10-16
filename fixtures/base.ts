@@ -16,6 +16,8 @@ export const test = base.extend<{ platformLabel: void }>({
   platformLabel: [
     async ({}, use, testInfo) => {
       const platform = platformOf(testInfo.project.name);
+      // Read by the Testiny reporter (customResultFields: ['platform']).
+      testInfo.annotations.push({ type: 'platform', description: platform });
       await allure.parentSuite(platform);
       await allure.label('platform', platform);
       await use();

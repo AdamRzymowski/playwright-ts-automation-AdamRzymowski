@@ -1,4 +1,5 @@
-import { defineConfig, devices } from '@playwright/test';
+import './env';
+import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
 import { MONSTERS_DIR, MONSTERS_PORT, MONSTERS_URL, SAUCEDEMO_URL } from './sites';
 
 /**
@@ -16,6 +17,27 @@ import { MONSTERS_DIR, MONSTERS_PORT, MONSTERS_URL, SAUCEDEMO_URL } from './site
 const DESKTOP_SPECS = /[\\/]e2e[\\/].*\.spec\.ts$/;
 const MOBILE_SPECS = /[\\/]mobile[\\/].*\.spec\.ts$/;
 
+/*
+ * Testiny (test management): uploads test cases and a test run when TESTINY_UPLOAD=1 (npm run test:testiny).
+ * Needs TESTINY_API_KEY and TESTINY_PROJECT, e.g. in .env (see .env.example).
+ */
+const testiny: ReporterDescription[] = process.env.TESTINY_UPLOAD
+  ? [
+      [
+        '@testiny/automation/reporters/playwright',
+        {
+          enable: true,
+          project: process.env.TESTINY_PROJECT,
+          sourceName: process.env.TESTINY_SOURCE ?? 'playwright-ui',
+          enableAttachments: true,
+          completeRuns: true,
+          // Copies each test's "platform" annotation (Desktop / Mobile, set in fixtures/base.ts) into Testiny.
+          customResultFields: ['platform'],
+        },
+      ],
+    ]
+  : [];
+
 export default defineConfig({
   testDir: './tests',
   globalSetup: './global-setup.ts',
@@ -31,6 +53,8 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
+    /* Machine-readable results; tools/export-testiny-csv.mjs reads the named test steps from it. */
+    ['json', { outputFile: 'reports/playwright-results.json' }],
     [
       'allure-playwright',
       {
@@ -45,6 +69,7 @@ export default defineConfig({
         },
       },
     ],
+    ...testiny,
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {

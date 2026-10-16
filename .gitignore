@@ -26,3 +26,6 @@ npm-debug.log*
 /allure-results/
 /allure-report/
 /allure-history/
+
+# Generated reports (Playwright JSON, Testiny CSV)
+/reports/

@@ -79,6 +79,26 @@ Desktop or Mobile by `fixtures/base.ts`. Each run starts
 with empty `allure-results/`; run history is kept in `allure-history/`, so trend charts grow with every
 report you generate.
 
+## Test management (Testiny)
+
+Results can be uploaded to [Testiny](https://www.testiny.io) (free plan: up to 3 users). The first upload
+creates a test case for each test; every upload after that adds a test run with pass/fail, errors and
+attachments (screenshots, videos).
+
+1. In Testiny, create a project and an API key (Settings > API keys).
+2. Copy `.env.example` to `.env` and fill in `TESTINY_API_KEY` and `TESTINY_PROJECT`.
+   `.env` is git-ignored, so the key never reaches GitHub.
+3. Run `npm run test:testiny` (all tests, Monsters on the live site, results uploaded).
+
+Normal runs (`npm test` etc.) don't upload anything. Each test's Desktop / Mobile label is sent as a
+`platform` field.
+
+Uploaded results appear under Testiny's **Automation** tab. To also list the tests under **Test cases**
+(for test plans and manual runs), run the suite, then `npm run export:testiny`. That writes
+`reports/testiny-test-cases.csv` (folders `Desktop|Mobile > site > feature > story`, priority from the
+Allure severity, steps from `test.step(...)` blocks). Import it in Testiny under Test cases > Import with
+the steps delimiter set to **rows** and the folder delimiter **>**.
+
 ## Project layout
 
 ```
