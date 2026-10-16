@@ -1,0 +1,62 @@
+{
+  // Terminal > Run Task... (or Ctrl+Shift+P > "Tasks: Run Task") to start a test run.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Tests: choose what to run",
+      "detail": "Asks: UI, accessibility, performance or all, then runs them",
+      "type": "shell",
+      "command": "npm run tests",
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: UI only",
+      "type": "shell",
+      "command": "npm run tests -- --suite=ui",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: accessibility only",
+      "type": "shell",
+      "command": "npm run tests -- --suite=a11y",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: performance smoke (k6)",
+      "type": "shell",
+      "command": "npm run tests -- --suite=perf --perf=smoke",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: performance load (k6)",
+      "type": "shell",
+      "command": "npm run tests -- --suite=perf --perf=load",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: all suites",
+      "type": "shell",
+      "command": "npm run tests -- --suite=all --perf=smoke",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Report: open Allure report",
+      "type": "shell",
+      "command": "npm run allure:open",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": []
+    }
+  ]
+}

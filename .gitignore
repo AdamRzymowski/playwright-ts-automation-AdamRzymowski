@@ -17,6 +17,7 @@ node_modules/
 Thumbs.db
 .vscode/*
 !.vscode/extensions.json
+!.vscode/tasks.json
 .idea/
 
 # Logs

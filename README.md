@@ -47,17 +47,50 @@ browsers directly, so no chromedriver, geckodriver or msedgedriver is needed.
 
 ## Running tests
 
-The easiest way is the interactive runner:
+### Quick start (VS Code)
+
+Open a terminal in VS Code (**Terminal > New Terminal**, or `` Ctrl+` ``) in the project folder and run:
 
 ```bash
 npm run tests
 ```
 
-It asks which suites to run: **1) UI tests**, **2) Accessibility tests**, **3) Performance tests** or
-**4) All of them**, then the follow-ups that apply (k6 smoke or load, upload to Testiny if `.env` has a
-key, open the Allure report). It ends with a PASSED/FAILED summary per suite. Monsters tests run against
-the live site. Without a terminal (CI) or with flags it doesn't ask:
-`npm run tests -- --suite=ui,perf --perf=smoke --no-report` (suites: `ui`, `a11y`, `perf`, `all`).
+It asks what to run:
+
+```
+Which tests do you want to run?
+
+  1) UI tests  - functional tests of both sites, desktop + mobile (217 tests)
+  2) Accessibility tests  - WCAG 2.2 AA scans and keyboard checks (49 tests)
+  3) Performance tests  - k6 against the live Substandard Monsters site
+  4) All of them
+
+Your choice [1-4, default 4]:
+```
+
+then the follow-ups that apply: k6 smoke or load, upload to Testiny (only if `.env` has a key), and
+whether to open the Allure report. It ends with a PASSED/FAILED summary per suite. Monsters tests run
+against the live site.
+
+**Skip the questions** by naming the suites (handy for CI, or to repeat a run):
+
+| Command | Runs |
+| --- | --- |
+| `npm run tests -- --suite=ui` | UI tests |
+| `npm run tests -- --suite=a11y` | Accessibility tests |
+| `npm run tests -- --suite=perf --perf=smoke` | k6 smoke test (`--perf=load` for the load test) |
+| `npm run tests -- --suite=all` | Everything |
+| `npm run tests -- --suite=ui,a11y --no-report` | Several suites, without opening the report |
+
+Add `--testiny` to upload the Playwright results to Testiny.
+
+**Without typing:** **Terminal > Run Task...** (or `Ctrl+Shift+P` > *Tasks: Run Task*) lists ready-made
+tasks from `.vscode/tasks.json`: *Tests: choose what to run*, *Tests: UI only*, *Tests: accessibility
+only*, *Tests: performance smoke / load (k6)*, *Tests: all suites* and *Report: open Allure report*.
+*Tests: choose what to run* is the default test task, so `Ctrl+Shift+P` > *Tasks: Run Test Task* starts it
+directly (you can bind a keyboard shortcut to that command).
+
+### Playwright commands
 
 Or run Playwright directly:
 
