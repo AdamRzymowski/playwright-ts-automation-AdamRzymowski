@@ -26,7 +26,9 @@
     "report:full": "node tools/report-full.mjs",
     "test:a11y": "playwright test --grep @a11y",
     "test:testiny": "cross-env TESTINY_UPLOAD=1 MONSTERS_URL=https://substandard-monsters.netlify.app playwright test",
-    "export:testiny": "node tools/export-testiny-csv.mjs"
+    "export:testiny": "node tools/export-testiny-csv.mjs",
+    "perf:smoke": "cross-env K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_OPEN=false K6_WEB_DASHBOARD_EXPORT=reports/k6-smoke-report.html k6 run perf/smoke.ts",
+    "perf:load": "cross-env K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_OPEN=false K6_WEB_DASHBOARD_EXPORT=reports/k6-load-report.html k6 run perf/load.ts"
   },
   "keywords": [],
   "author": "",

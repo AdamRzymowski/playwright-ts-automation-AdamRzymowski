@@ -79,6 +79,25 @@ Desktop or Mobile by `fixtures/base.ts`. Each run starts
 with empty `allure-results/`; run history is kept in `allure-history/`, so trend charts grow with every
 report you generate.
 
+## Performance tests (k6)
+
+[k6](https://grafana.com/docs/k6/latest/) scripts in `perf/` load the Substandard Monsters site the way a
+visitor does: the English page with its CSS, JS and photos, then the Polish page. They only read pages and
+never send the request form. Install k6 once (`winget install k6 --source winget`), then:
+
+| Command | What it does |
+| --- | --- |
+| `npm run perf:smoke` | 1 visitor for 30 s: is the site up, correct and fast? |
+| `npm run perf:load` | Ramps up to 10 visitors at once over ~2.5 min |
+
+Pass/fail rules (`thresholds` in `perf/lib/monsters.ts`): under 1% failed requests, every content check
+passing, 95% of requests within 1 s (1.5 s under load), and HTML time-to-first-byte within 600 ms
+(800 ms under load). k6 exits with an error when a rule is broken.
+
+Results: a summary in the console, plus `reports/k6-<test>-report.html` (graphs you can open in a
+browser) and `reports/k6-<test>-summary.txt|json`. Point at another copy with
+`k6 run -e MONSTERS_URL=https://... perf/smoke.ts`. Keep the load small: the site runs on Netlify's free plan.
+
 ## Test management (Testiny)
 
 Results can be uploaded to [Testiny](https://www.testiny.io) (free plan: up to 3 users). The first upload
