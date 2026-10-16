@@ -26,7 +26,7 @@ The request form is never really sent: every call to FormSubmit is blocked or mo
 The real-submission test (`tests/monsters/e2e/real-submit.spec.ts`) is skipped unless `SUBMIT_REAL_FORM=1`
 is set. Its data is marked `[AUTOMATED TEST - please ignore]`.
 
-Accessibility: `tests/monsters/*/accessibility.spec.ts` scan each page state with
+Accessibility: `tests/monsters/*/accessibility.spec.ts` (tagged `@a11y`) scan each page state with
 [axe-core](https://github.com/dequelabs/axe-core) against WCAG 2.0/2.1/2.2 level A and AA, and add keyboard,
 screen-reader label, focus, zoom and touch-target checks. Each scan attaches a readable summary to the
 Allure report. Run them with `npm run test:a11y`.
@@ -47,6 +47,20 @@ browsers directly, so no chromedriver, geckodriver or msedgedriver is needed.
 
 ## Running tests
 
+The easiest way is the interactive runner:
+
+```bash
+npm run tests
+```
+
+It asks which suites to run: **1) UI tests**, **2) Accessibility tests**, **3) Performance tests** or
+**4) All of them**, then the follow-ups that apply (k6 smoke or load, upload to Testiny if `.env` has a
+key, open the Allure report). It ends with a PASSED/FAILED summary per suite. Monsters tests run against
+the live site. Without a terminal (CI) or with flags it doesn't ask:
+`npm run tests -- --suite=ui,perf --perf=smoke --no-report` (suites: `ui`, `a11y`, `perf`, `all`).
+
+Or run Playwright directly:
+
 | Command | What it does |
 | --- | --- |
 | `npm test` | All projects, headless, in parallel |
@@ -54,6 +68,8 @@ browsers directly, so no chromedriver, geckodriver or msedgedriver is needed.
 | `npm run test:ui` | Playwright UI mode: pick, watch, time-travel and re-run tests |
 | `npm run test:debug` | Step through with the Playwright Inspector |
 | `npm run test:smoke` | Only tests tagged `@smoke` |
+| `npm run test:ui-only` | UI tests only (everything not tagged `@a11y`) |
+| `npm run test:a11y` | Accessibility tests only (tagged `@a11y`) |
 | `npm run test:saucedemo` / `test:monsters` | One site |
 | `npm run test:desktop` | Chrome + Firefox + Edge |
 | `npm run test:mobile` | Mobile emulation (Pixel 7 on Chrome and Edge) |
@@ -91,8 +107,9 @@ never send the request form. Install k6 once (`winget install k6 --source winget
 | `npm run perf:load` | Ramps up to 10 visitors at once over ~2.5 min |
 
 Pass/fail rules (`thresholds` in `perf/lib/monsters.ts`): under 1% failed requests, every content check
-passing, 95% of requests within 1 s (1.5 s under load), and HTML time-to-first-byte within 600 ms
-(800 ms under load). k6 exits with an error when a rule is broken.
+passing, 95% of HTML pages within 1 s and 95% of CSS/JS/photos within 2 s (1.5 s / 3 s under load), and
+HTML time-to-first-byte within 600 ms (800 ms under load). Photo download times depend on your own
+internet connection, which is why they have a separate, looser limit. k6 exits with an error when a rule is broken.
 
 Results: a summary in the console, plus `reports/k6-<test>-report.html` (graphs you can open in a
 browser) and `reports/k6-<test>-summary.txt|json`. Point at another copy with

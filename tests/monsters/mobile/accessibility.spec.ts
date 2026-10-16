@@ -4,21 +4,21 @@ import { formatViolations, scanWcag } from '../../utils/a11y';
 
 // WCAG checks that matter on a phone: the collapsed layout, the open menu, zoom and touch target size.
 
-test.describe('Mobile accessibility (WCAG 2.2 AA)', () => {
+test.describe('Mobile accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
   test.beforeEach(async () => {
     await allure.epic('Substandard Monsters');
     await allure.feature('Accessibility');
     await allure.story('Mobile');
   });
 
-  test('mobile page has no WCAG violations', { tag: ['@a11y', '@smoke'] }, async ({ page, site }) => {
+  test('mobile page has no WCAG violations', { tag: ['@smoke'] }, async ({ page, site }) => {
     await allure.severity(allure.Severity.CRITICAL);
     await site.goto();
     const violations = await scanWcag(page, 'mobile page');
     expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
   });
 
-  test('open mobile menu has no WCAG violations', { tag: ['@a11y'] }, async ({ page, site }) => {
+  test('open mobile menu has no WCAG violations', async ({ page, site }) => {
     await site.goto();
     await site.menuButton.tap();
     await expect(site.navLink('gallery')).toBeVisible();

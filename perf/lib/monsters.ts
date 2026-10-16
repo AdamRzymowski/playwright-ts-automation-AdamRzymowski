@@ -8,7 +8,8 @@ export const BASE_URL = (__ENV.MONSTERS_URL || 'https://substandard-monsters.net
 /** Time to first byte of the HTML pages only (assets excluded), to watch server/CDN speed. */
 export const pageTtfb = new Trend('page_ttfb', true);
 
-const params = (name: string) => ({ tags: { name } });
+/** Tags each request with a readable name and its type (page or asset) for per-type limits. */
+const params = (name: string) => ({ tags: { name, type: name.startsWith('page') ? 'page' : 'asset' } });
 
 /**
  * One visitor's journey: English page with its CSS, JS and a few photos, then the Polish page.
@@ -51,8 +52,10 @@ export function visitSite() {
 export const thresholds = {
   // Fewer than 1% of requests may fail.
   http_req_failed: ['rate<0.01'],
-  // 95% of all requests (pages + assets) finish within 1 s.
-  http_req_duration: ['p(95)<1000'],
+  // 95% of HTML pages fully load within 1 s.
+  'http_req_duration{type:page}': ['p(95)<1000'],
+  // 95% of CSS/JS/photos within 2 s (large photos depend on the tester's own connection speed).
+  'http_req_duration{type:asset}': ['p(95)<2000'],
   // HTML pages start arriving within 600 ms for 95% of visits.
   page_ttfb: ['p(95)<600'],
   // Every content check must pass.

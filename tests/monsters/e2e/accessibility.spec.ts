@@ -6,7 +6,7 @@ import { formatViolations, scanWcag } from '../../utils/a11y';
 // Automated WCAG 2.2 A/AA checks with axe-core, plus keyboard checks axe cannot do on its own.
 // Automated tools find roughly a third to a half of accessibility problems; a manual review is still needed.
 
-test.describe('Accessibility (WCAG 2.2 AA)', () => {
+test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
   test.beforeEach(async () => {
     await allure.epic('Substandard Monsters');
     await allure.feature('Accessibility');
@@ -18,27 +18,27 @@ test.describe('Accessibility (WCAG 2.2 AA)', () => {
       await allure.story('axe-core scan');
     });
 
-    test('English page', { tag: ['@a11y', '@smoke'] }, async ({ page, site }) => {
+    test('English page', { tag: ['@smoke'] }, async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       await site.goto();
       const violations = await scanWcag(page, 'English page');
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Polish page', { tag: ['@a11y'] }, async ({ page, sitePl }) => {
+    test('Polish page', async ({ page, sitePl }) => {
       await sitePl.goto();
       const violations = await scanWcag(page, 'Polish page');
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Painting gallery with sub-tabs open', { tag: ['@a11y'] }, async ({ page, site }) => {
+    test('Painting gallery with sub-tabs open', async ({ page, site }) => {
       await site.goto('#gallery');
       await site.tab('painting').click();
       const violations = await scanWcag(page, 'painting gallery', { include: '[data-testid="gallery"]' });
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Lightbox open', { tag: ['@a11y'] }, async ({ page, site }) => {
+    test('Lightbox open', async ({ page, site }) => {
       await site.goto('#gallery');
       await site.visibleGallery().locator('.gallery-item').first().click();
       await expect(site.lightbox).toBeVisible();
@@ -46,7 +46,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', () => {
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Request form showing an error message', { tag: ['@a11y'] }, async ({ page, site }) => {
+    test('Request form showing an error message', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'false', message: 'Test error' } }));
       await site.goto('#contact');
       await site.fillRequest(createPrintRequest());
@@ -56,7 +56,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', () => {
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Request form showing the thank-you message', { tag: ['@a11y'] }, async ({ page, site }) => {
+    test('Request form showing the thank-you message', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
       await site.goto('#contact');
       await site.fillRequest(createPrintRequest());
@@ -95,7 +95,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', () => {
       }
     });
 
-    test('the form can be filled and sent with the keyboard only (WCAG 2.1.1)', { tag: ['@a11y'] }, async ({ page, site }) => {
+    test('the form can be filled and sent with the keyboard only (WCAG 2.1.1)', async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
       await site.goto('#contact');
@@ -143,7 +143,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', () => {
       await expect(site.visibleGallery()).toHaveAttribute('data-gallery', 'fdm');
     });
 
-    test('gallery photos can be opened with the keyboard (WCAG 2.1.1)', { tag: ['@a11y'] }, async ({ page, site }) => {
+    test('gallery photos can be opened with the keyboard (WCAG 2.1.1)', async ({ page, site }) => {
       await allure.description(
         'A keyboard-only visitor must be able to open the enlarged photo. The photos are <figure> elements ' +
           'with a click handler, so they need tabindex="0" (or a <button>) and an Enter/Space handler.',

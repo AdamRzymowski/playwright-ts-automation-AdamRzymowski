@@ -18,7 +18,8 @@ export const options: Options = {
   thresholds: {
     ...thresholds,
     // Under load, allow a little more time than the smoke test.
-    http_req_duration: ['p(95)<1500'],
+    'http_req_duration{type:page}': ['p(95)<1500'],
+    'http_req_duration{type:asset}': ['p(95)<3000'],
     page_ttfb: ['p(95)<800'],
   },
 };
