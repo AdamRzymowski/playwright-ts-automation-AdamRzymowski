@@ -1,6 +1,6 @@
 import * as allure from 'allure-js-commons';
 import { test, expect, FORMSUBMIT } from '../../../fixtures/monsters';
-import { createPrintRequest, MONSTER_SERVICES } from '../../utils/testData';
+import { createPrintRequest, MONSTER_SERVICES, words } from '../../utils/testData';
 
 test.describe('Languages (EN / PL)', () => {
   test.beforeEach(async () => {
@@ -19,7 +19,8 @@ test.describe('Languages (EN / PL)', () => {
 
     await test.step('switch to PL', async () => {
       await site.languageLink('pl').click();
-      await expect(page).toHaveURL(/pl\.html$/);
+      // Netlify serves pretty URLs (/pl, /index) as well as the file names.
+      await expect(page).toHaveURL(/\/pl(\.html)?$/);
       await expect(page.locator('html')).toHaveAttribute('lang', 'pl');
       await expect(page).toHaveTitle(sitePl.labels.title);
       await expect(sitePl.heading).toHaveText(sitePl.labels.heading);
@@ -28,7 +29,7 @@ test.describe('Languages (EN / PL)', () => {
 
     await test.step('switch back to EN', async () => {
       await sitePl.languageLink('en').click();
-      await expect(page).toHaveURL(/index\.html$/);
+      await expect(page).toHaveURL(/\/(index(\.html)?)?$/);
       await expect(site.heading).toHaveText(site.labels.heading);
     });
   });
@@ -43,8 +44,9 @@ test.describe('Languages (EN / PL)', () => {
     for (const [name, label] of Object.entries(tabs)) {
       await expect.soft(sitePl.tab(name as keyof typeof tabs)).toHaveText(label);
     }
-    await expect.soft(sitePl.submitButton).toBeVisible();
-    const options = await sitePl.field('print_type').locator('option:not([value=""])').allTextContents();
+    await expect.soft(sitePl.submitButton).toHaveText(sitePl.labels.submit);
+    await expect.soft(sitePl.requiredNote).toHaveText(sitePl.labels.requiredNote);
+    const options = await sitePl.field('Service').locator('option:not([value=""])').allTextContents();
     expect.soft(options).toEqual([...MONSTER_SERVICES.pl]);
   });
 
@@ -55,13 +57,25 @@ test.describe('Languages (EN / PL)', () => {
       await route.fulfill({ json: { success: 'true' } });
     });
     await sitePl.goto('#contact');
+    const request = createPrintRequest({ service: MONSTER_SERVICES.pl[1] });
 
-    await sitePl.fillRequest(createPrintRequest({ service: MONSTER_SERVICES.pl[1], delivery: 'Wysyłka' }));
+    await sitePl.fillRequest(request);
     await sitePl.submitButton.click();
 
     await expect(sitePl.formStatus).toHaveText(sitePl.labels.ok);
     expect.soft(body).toContain('Polski');
-    expect.soft(body).toContain('Nowe zamówienie wydruku');
+    // e.g. "Druk FDM request from Anna Nowak - Substandard Monsters [PL]"
+    expect.soft(body).toContain(sitePl.expectedSubject(request));
+  });
+
+  test('Polish 5-word message is in Polish', async ({ page, sitePl }) => {
+    await page.route(FORMSUBMIT, (route) => route.abort());
+    await sitePl.goto('#contact');
+
+    await sitePl.fillRequest(createPrintRequest({ service: MONSTER_SERVICES.pl[0], description: words(3) }));
+    await sitePl.submitButton.click();
+
+    expect(await sitePl.validationMessage('Description')).toBe(sitePl.labels.minWords);
   });
 
   test('EN and PL pages have the same photos and services', async ({ page, site, sitePl }) => {

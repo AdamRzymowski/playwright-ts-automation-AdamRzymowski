@@ -17,6 +17,15 @@ check whatever branch is checked out there. To use another folder set `MONSTERS_
 The request form is never really sent: every call to FormSubmit is blocked or mocked
 (`fixtures/monsters.ts`), so test runs don't email you.
 
+| Command | What it does |
+| --- | --- |
+| `npm run test:monsters` | Monsters tests against the local `../Substandard-Monsters` folder |
+| `npm run test:monsters:live` | Monsters tests against https://substandard-monsters.netlify.app |
+| `npm run test:monsters:submit` | **Sends one real request email** through the live form (Chromium only), to check the whole chain works end to end |
+
+The real-submission test (`tests/monsters/e2e/real-submit.spec.ts`) is skipped unless `SUBMIT_REAL_FORM=1`
+is set. Its data is marked `[AUTOMATED TEST - please ignore]`.
+
 Covered: page structure and nav, every image loads, no JavaScript errors, gallery tabs and Painting
 sub-tabs, service cards and `#gallery-...` links, lightbox, form success / validation / errors, the
 EN/PL switch and translations, EN/PL content staying in sync, and the mobile menu and layout.

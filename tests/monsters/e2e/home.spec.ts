@@ -47,17 +47,24 @@ test.describe('Home page', () => {
     }
   });
 
+  test('footer shows the site version', async ({ site }) => {
+    await expect(site.footerVersion).toHaveText(/^\d+\.\d+\.\d+$/);
+    await allure.parameter('Site version', (await site.footerVersion.textContent()) ?? '');
+  });
+
   test('every image on the page loads', async ({ page, request }) => {
     await allure.severity(allure.Severity.CRITICAL);
+    // Downloads every photo; allow for a slow connection to the live site.
+    test.slow();
 
-    // Includes hidden galleries and lazy-loaded photos, so check each file directly.
+    // Includes hidden galleries and lazy-loaded photos, so check each file directly (HEAD: no download).
     const sources = await page.locator('img[src]').evaluateAll((imgs) =>
       [...new Set(imgs.map((img) => (img as HTMLImageElement).src))],
     );
     expect(sources.length).toBeGreaterThan(10);
-    for (const src of sources) {
-      const res = await request.get(src);
-      expect.soft(res.status(), src).toBe(200);
+    const statuses = await Promise.all(sources.map(async (src) => [src, (await request.head(src)).status()] as const));
+    for (const [src, status] of statuses) {
+      expect.soft(status, src).toBe(200);
     }
   });
 

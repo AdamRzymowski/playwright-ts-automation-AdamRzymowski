@@ -25,6 +25,9 @@ export function createShippingInfo(overrides: Partial<ShippingInfo> = {}): Shipp
   };
 }
 
+/** Email address entered into forms as test data (the project owner's own inbox). */
+export const TEST_EMAIL = 'adamrzymowski@gmail.com';
+
 /** Service dropdown options on the Substandard Monsters request form, per language. */
 export const MONSTER_SERVICES = {
   en: ['Resin print', 'FDM print', 'Project design (no file yet)', 'Miniature painting', 'Not sure'],
@@ -37,14 +40,18 @@ export function createPrintRequest(overrides: Partial<RequestDetails> = {}): Req
   const lastName = faker.person.lastName();
   return {
     name: `${firstName} ${lastName}`,
-    email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-    phone: faker.phone.number({ style: 'international' }),
+    email: TEST_EMAIL,
     service: faker.helpers.arrayElement(MONSTER_SERVICES.en),
-    material: faker.helpers.arrayElement(['black PLA', 'grey resin', 'red PETG', 'not sure']),
     quantity: faker.number.int({ min: 1, max: 20 }),
-    neededBy: faker.date.soon({ days: 60 }).toISOString().slice(0, 10),
+    material: faker.helpers.arrayElement(['black PLA', 'grey resin', 'red PETG', 'not sure']),
     fileLink: faker.internet.url(),
-    message: faker.lorem.sentences(2),
+    // Comfortably above the form's 5-word minimum.
+    description: faker.lorem.sentences(2),
     ...overrides,
   };
+}
+
+/** A description with exactly n words. */
+export function words(n: number): string {
+  return faker.lorem.words(n);
 }
