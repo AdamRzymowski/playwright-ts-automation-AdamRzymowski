@@ -20,6 +20,14 @@
       "problemMatcher": []
     },
     {
+      "label": "Tests: API only",
+      "type": "shell",
+      "command": "npm run tests -- --suite=api",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
       "label": "Tests: accessibility only",
       "type": "shell",
       "command": "npm run tests -- --suite=a11y",

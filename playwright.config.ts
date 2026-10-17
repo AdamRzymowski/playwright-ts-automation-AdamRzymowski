@@ -16,6 +16,7 @@ import { MONSTERS_DIR, MONSTERS_PORT, MONSTERS_URL, SAUCEDEMO_URL } from './site
  */
 const DESKTOP_SPECS = /[\\/]e2e[\\/].*\.spec\.ts$/;
 const MOBILE_SPECS = /[\\/]mobile[\\/].*\.spec\.ts$/;
+const API_SPECS = /[\\/]api[\\/].*\.spec\.ts$/;
 
 /*
  * Testiny (test management): uploads test cases and a test run when TESTINY_UPLOAD=1 (npm run test:testiny).
@@ -114,6 +115,12 @@ export default defineConfig({
       name: 'mobile-edge',
       testMatch: MOBILE_SPECS,
       use: { ...devices['Pixel 7'], channel: 'msedge' },
+    },
+
+    /* Backend/API tests: plain HTTP requests, no browser. Run once, not per browser. */
+    {
+      name: 'api',
+      testMatch: API_SPECS,
     },
   ],
 

@@ -2,6 +2,7 @@ import * as allure from 'allure-js-commons';
 import { test, expect, FORMSUBMIT } from '../../../fixtures/monsters';
 import type { RequestDetails } from '../../../pages/monsters/MonstersPage';
 import { TEST_EMAIL } from '../../utils/testData';
+import { FORMSUBMIT_SUCCESS } from '../../../fixtures/formsubmit-api';
 
 /**
  * End-to-end: really submits the request form to FormSubmit, which emails the site owner.
@@ -38,13 +39,36 @@ test.describe('Real form submission', () => {
     await site.submitButton.click();
     const response = await responsePromise;
     const body = await response.json().catch(() => ({}));
-    await allure.attachment('formsubmit-response.json', JSON.stringify(body, null, 2), 'application/json');
+    const sent = response.request();
+    await allure.attachment(
+      'formsubmit-exchange.json',
+      JSON.stringify({ request: { url: sent.url(), method: sent.method(), headers: sent.headers() }, status: response.status(), headers: response.headers(), body }, null, 2),
+      'application/json',
+    );
 
-    expect(response.status(), 'FormSubmit HTTP status').toBe(200);
-    // FormSubmit explains failures (e.g. "This form needs Activation") in body.message.
-    expect(String(body.success), `FormSubmit says: ${body.message}`).toBe('true');
-    await expect(site.formStatus).toHaveText(site.labels.ok);
-    await expect(site.formStatus).toHaveClass(/\bok\b/);
-    await expect(site.field('Name')).toHaveValue('');
+    await test.step('Request the browser sent', async () => {
+      expect.soft(sent.method()).toBe('POST');
+      expect.soft(sent.url()).toBe(await site.form.getAttribute('action'));
+      expect.soft(sent.headers()['accept']).toBe('application/json');
+      const payload = sent.postDataBuffer()?.toString('utf8') ?? '';
+      expect.soft(payload).toContain(site.expectedSubject(request));
+      expect.soft(payload).toContain(TEST_EMAIL);
+      expect.soft(payload).toContain('English');
+    });
+
+    await test.step('Backend response', async () => {
+      expect.soft(response.status(), 'FormSubmit HTTP status').toBe(200);
+      // FormSubmit labels its JSON reply text/html; record it instead of failing on it.
+      await allure.parameter('Content-Type', response.headers()['content-type'] ?? '');
+      // FormSubmit explains failures (e.g. "This form needs Activation") in body.message.
+      expect(body, `FormSubmit says: ${body.message}`).toEqual(FORMSUBMIT_SUCCESS);
+    });
+
+    await test.step('Page shows the success state', async () => {
+      await expect(site.formStatus).toHaveText(site.labels.ok);
+      await expect(site.formStatus).toHaveClass(/\bok\b/);
+      await expect(site.field('Name')).toHaveValue('');
+      await expect(site.submitButton).toBeEnabled();
+    });
   });
 });

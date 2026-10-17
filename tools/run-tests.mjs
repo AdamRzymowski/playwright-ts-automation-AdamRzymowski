@@ -1,7 +1,7 @@
 // Interactive test runner: `npm run tests` asks which suites to run, then runs them and shows the results.
 //
 // Non-interactive (CI or scripts):
-//   npm run tests -- --suite=ui|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
+//   npm run tests -- --suite=ui|api|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
 //                    --perf=smoke|load  --testiny  --no-report
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -14,10 +14,13 @@ try {
 }
 
 const SUITES = {
-  ui: { label: 'UI tests', detail: 'functional tests of both sites, desktop + mobile (217 tests)' },
-  a11y: { label: 'Accessibility tests', detail: 'WCAG 2.2 AA scans and keyboard checks (49 tests)' },
+  ui: { label: 'UI tests', detail: 'functional browser tests of both sites, desktop + mobile' },
+  api: { label: 'API tests', detail: 'request form backend (FormSubmit), no browser' },
+  a11y: { label: 'Accessibility tests', detail: 'WCAG 2.2 AA scans and keyboard checks' },
   perf: { label: 'Performance tests', detail: 'k6 against the live Substandard Monsters site' },
 };
+// Playwright tags that mark the non-UI suites; UI tests are everything without one of them.
+const TAGS = { api: '@api', a11y: '@a11y' };
 
 const args = Object.fromEntries(
   process.argv.slice(2).map((a) => {
@@ -51,18 +54,19 @@ if (args.suite) {
   suites = String(args.suite) === 'all' ? Object.keys(SUITES) : String(args.suite).split(',');
 } else if (interactive) {
   console.log('\nWhich tests do you want to run?\n');
-  console.log(`  1) ${SUITES.ui.label}  - ${SUITES.ui.detail}`);
-  console.log(`  2) ${SUITES.a11y.label}  - ${SUITES.a11y.detail}`);
-  console.log(`  3) ${SUITES.perf.label}  - ${SUITES.perf.detail}`);
-  console.log('  4) All of them\n');
-  const pick = await ask('Your choice [1-4, default 4]: ', ['1', '2', '3', '4'], '4');
-  suites = { 1: ['ui'], 2: ['a11y'], 3: ['perf'], 4: ['ui', 'a11y', 'perf'] }[pick];
+  const keys = Object.keys(SUITES);
+  keys.forEach((k, i) => console.log(`  ${i + 1}) ${SUITES[k].label}  - ${SUITES[k].detail}`));
+  console.log(`  ${keys.length + 1}) All of them\n`);
+  const all = String(keys.length + 1);
+  const choices = keys.map((_, i) => String(i + 1)).concat(all);
+  const pick = await ask(`Your choice [1-${all}, default ${all}]: `, choices, all);
+  suites = pick === all ? keys : [keys[Number(pick) - 1]];
 } else {
   suites = Object.keys(SUITES);
 }
 const unknown = suites.filter((s) => !SUITES[s]);
 if (unknown.length) {
-  console.error(`Unknown suite(s): ${unknown.join(', ')}. Use ui, a11y, perf or all.`);
+  console.error(`Unknown suite(s): ${unknown.join(', ')}. Use ui, api, a11y, perf or all.`);
   process.exit(2);
 }
 const playwrightSuites = suites.filter((s) => s !== 'perf');
@@ -98,8 +102,15 @@ const run = (cmd) => {
 const results = [];
 
 if (playwrightSuites.length) {
-  // UI = everything not tagged @a11y; accessibility = everything tagged @a11y.
-  const filter = playwrightSuites.length === 2 ? '' : playwrightSuites[0] === 'ui' ? ' --grep-invert @a11y' : ' --grep @a11y';
+  // UI = tests without an @api/@a11y tag. With UI chosen, leave out the tagged suites not chosen;
+  // without UI, run only the chosen tags.
+  const chosenTags = playwrightSuites.filter((s) => TAGS[s]).map((s) => TAGS[s]);
+  const otherTags = Object.values(TAGS).filter((t) => !chosenTags.includes(t));
+  const filter = playwrightSuites.includes('ui')
+    ? otherTags.length
+      ? ` --grep-invert "${otherTags.join('|')}"`
+      : ''
+    : ` --grep "${chosenTags.join('|')}"`;
   const name = playwrightSuites.map((s) => SUITES[s].label).join(' + ');
   results.push([name, run(`npx playwright test${filter}`)]);
   if (openReport || process.env.CI) {
