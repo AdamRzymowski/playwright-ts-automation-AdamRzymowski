@@ -2,7 +2,8 @@
 //
 // Non-interactive (CI or scripts):
 //   npm run tests -- --suite=ui|api|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
-//                    --env=live|dev|local  --perf=smoke|load  --testiny  --no-report
+//                    --env=live|dev|local  --preview=<pull request number or preview URL>
+//                    --perf=smoke|load  --testiny  --no-report
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -22,12 +23,18 @@ const SUITES = {
 // Playwright tags that mark the non-UI suites; UI tests are everything without one of them.
 const TAGS = { api: '@api', a11y: '@a11y' };
 
+const argv = process.argv.slice(2);
 const args = Object.fromEntries(
-  process.argv.slice(2).map((a) => {
-    const [k, v] = a.replace(/^--/, '').split('=');
-    return [k, v ?? true];
-  }),
+  argv
+    .filter((a) => a.startsWith('--'))
+    .map((a) => {
+      const [k, ...v] = a.slice(2).split('=');
+      return [k, v.length ? v.join('=') : true];
+    }),
 );
+// A bare value goes with --preview: `npm run test:preview -- 12`
+const positional = argv.filter((a) => !a.startsWith('--'));
+if (args.preview === true && positional.length) args.preview = positional[0];
 // --interactive forces the questions even without a terminal (e.g. answers piped in).
 const interactive = (process.stdin.isTTY || Boolean(args.interactive)) && !args.suite;
 const rl = interactive ? createInterface({ input: process.stdin, output: process.stdout, terminal: false }) : null;
@@ -43,6 +50,7 @@ async function ask(question, choices, fallback) {
     if (!process.stdin.isTTY) console.log(next.value); // echo piped answers
     const answer = next.value.trim().toLowerCase();
     if (answer === '' && fallback !== undefined) return fallback;
+    if (!choices) return next.value.trim();
     if (choices.includes(answer)) return answer;
     console.log(`  Please answer ${choices.join(' / ')}.`);
   }
@@ -76,18 +84,39 @@ const ENVS = {
   live: { label: 'Live', url: process.env.MONSTERS_LIVE_URL ?? 'https://substandard-monsters.netlify.app', detail: 'the published site' },
   dev: { label: 'Dev', url: process.env.MONSTERS_DEV_URL ?? 'https://dev--substandard-monsters.netlify.app', detail: 'Netlify preview of the dev branch, before publishing' },
   local: { label: 'Local', url: process.env.MONSTERS_LOCAL_URL ?? 'http://localhost:4173', detail: 'the ../Substandard-Monsters folder on this PC' },
+  preview: { label: 'Preview', url: '', detail: "Netlify's temporary deploy preview of a pull request" },
 };
-let target = String(args.env ?? process.env.MONSTERS_ENV ?? (interactive ? '' : 'live')).toLowerCase();
+/** "12" -> https://deploy-preview-12--substandard-monsters.netlify.app; a full address is used as is. */
+function previewUrl(value) {
+  const v = String(value).trim();
+  if (/^https?:\/\//.test(v)) return v;
+  if (!/^\d+$/.test(v)) return null;
+  const liveHost = new URL(ENVS.live.url).host; // substandard-monsters.netlify.app
+  return `https://deploy-preview-${v}--${liveHost}`;
+}
+
+let target = String(args.preview ? 'preview' : (args.env ?? process.env.MONSTERS_ENV ?? (interactive ? '' : 'live'))).toLowerCase();
 if (!target) {
   console.log('\nWhich version of the Substandard Monsters site?\n');
-  Object.values(ENVS).forEach((e, i) => console.log(`  ${i + 1}) ${e.label}  - ${e.detail} (${e.url})`));
+  Object.values(ENVS).forEach((e, i) => console.log(`  ${i + 1}) ${e.label}  - ${e.detail}${e.url ? ` (${e.url})` : ''}`));
   console.log('');
-  const pick = await ask('Your choice [1-3, default 1]: ', ['1', '2', '3', 'live', 'dev', 'local'], '1');
-  target = { 1: 'live', 2: 'dev', 3: 'local' }[pick] ?? pick;
+  const pick = await ask('Your choice [1-4, default 1]: ', ['1', '2', '3', '4', 'live', 'dev', 'local', 'preview'], '1');
+  target = { 1: 'live', 2: 'dev', 3: 'local', 4: 'preview' }[pick] ?? pick;
 }
 if (!ENVS[target]) {
-  console.error(`Unknown environment "${target}". Use live, dev or local.`);
+  console.error(`Unknown environment "${target}". Use live, dev, local or preview.`);
   process.exit(2);
+}
+if (target === 'preview') {
+  let value = args.preview && args.preview !== true ? args.preview : null;
+  while (!value || !previewUrl(value)) {
+    if (!interactive) {
+      console.error('Preview needs a pull request number or address, e.g. --preview=12');
+      process.exit(2);
+    }
+    value = await ask('Pull request number (or full preview address): ', null, null);
+  }
+  ENVS.preview.url = previewUrl(value);
 }
 const siteUrl = (process.env.MONSTERS_URL ?? ENVS[target].url).replace(/\/$/, '');
 
@@ -96,6 +125,12 @@ if (target !== 'local') {
   const status = await fetch(siteUrl, { method: 'HEAD' }).then((r) => r.status).catch(() => 0);
   if (status !== 200) {
     console.error(`\n${ENVS[target].label} site ${siteUrl} is not reachable (HTTP ${status || 'no answer'}).`);
+    if (target === 'preview') {
+      console.error(
+        'Deploy previews exist only for open pull requests on a Netlify site linked to GitHub.\n' +
+          'Check the pull request on GitHub: Netlify posts the preview link there.',
+      );
+    }
     if (target === 'dev') {
       console.error(
         'The dev preview only exists when Netlify branch deploys are on for the dev branch and dev has been pushed.\n' +

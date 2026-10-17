@@ -21,12 +21,13 @@ export const MONSTERS_URLS: Record<MonstersEnv, string> = {
 };
 
 const requested = (process.env.MONSTERS_ENV ?? 'local').toLowerCase();
-if (!(requested in MONSTERS_URLS)) {
+// With MONSTERS_URL the address is given directly, so the name is just a label (e.g. "preview").
+if (!process.env.MONSTERS_URL && !(requested in MONSTERS_URLS)) {
   throw new Error(`MONSTERS_ENV must be live, dev or local (got "${process.env.MONSTERS_ENV}")`);
 }
 
-/** Which environment the tests run against; "custom" when MONSTERS_URL is set directly. */
-export const MONSTERS_ENV: MonstersEnv | 'custom' = process.env.MONSTERS_URL ? 'custom' : (requested as MonstersEnv);
+/** Which environment the tests run against, e.g. live, dev, local, preview; "custom" for a bare MONSTERS_URL. */
+export const MONSTERS_ENV: string = process.env.MONSTERS_URL && !process.env.MONSTERS_ENV ? 'custom' : requested;
 export const MONSTERS_URL = (process.env.MONSTERS_URL ?? MONSTERS_URLS[requested as MonstersEnv]).replace(/\/$/, '');
 /** True when the tests need Playwright to start the local web server. */
 export const MONSTERS_IS_LOCAL = MONSTERS_URL === MONSTERS_URLS.local.replace(/\/$/, '');

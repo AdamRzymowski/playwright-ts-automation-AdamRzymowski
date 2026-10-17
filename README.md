@@ -22,11 +22,21 @@ The same tests can run against three copies of the site (addresses in `sites.ts`
 
 `npm run tests` asks which one to use (or `--env=live|dev|local`). Plain Playwright runs use
 `MONSTERS_ENV` (default `local`): `npm run test:monsters:live`, `test:monsters:dev`, `test:monsters:local`.
-`MONSTERS_URL` overrides everything, e.g. for a Netlify deploy preview of a pull request.
+`MONSTERS_URL` overrides everything with any address.
 The runner checks that a deployed copy answers before testing it.
 
-**Before / after publishing:** push your changes to `dev`, run the tests against **dev**; when they pass,
-merge `dev` into `main` and run them again against **live**.
+**Before / after publishing:**
+
+| When | Command | Tests |
+| --- | --- | --- |
+| Before publishing, a pull request | `npm run test:preview -- 12` | Netlify's temporary deploy preview of pull request #12 (`https://deploy-preview-12--substandard-monsters.netlify.app`); a full preview address works too |
+| Before publishing, the `dev` branch | `npm run test:dev` | The dev branch preview |
+| After publishing | `npm run test:live` | The published site |
+
+Each asks which suites to run (add `--suite=ui,api` etc. to skip the question). In VS Code, the tasks
+*Tests: pull request preview* (asks for the number) and *Tests: live site* do the same.
+A typical flow: open a pull request from `dev` into `main`, run `test:preview` on it, merge when green,
+then run `test:live`.
 
 The dev preview needs Netlify *branch deploys* switched on for `dev` (Site configuration > Build & deploy >
 Branches and deploy contexts > Branch deploys > add `dev`), and the site connected to the GitHub repo.
