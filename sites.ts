@@ -1,9 +1,32 @@
-/** Sites under test. Each can be pointed elsewhere with an environment variable. */
+/** Sites under test. Each can be pointed elsewhere with an environment variable (e.g. in .env). */
 
 export const SAUCEDEMO_URL = process.env.BASE_URL ?? 'https://www.saucedemo.com';
 
-/** Local checkout of the Substandard Monsters website, served by tools/serve-static.mjs. */
+/**
+ * Substandard Monsters environments:
+ * - live:  the published site (main branch on Netlify)
+ * - dev:   Netlify's branch deploy of the dev branch, to test changes before publishing
+ * - local: the ../Substandard-Monsters folder on this PC, served by tools/serve-static.mjs
+ * Pick one with MONSTERS_ENV=live|dev|local (default: local). MONSTERS_URL still overrides everything.
+ */
+export type MonstersEnv = 'live' | 'dev' | 'local';
+
 export const MONSTERS_DIR = process.env.MONSTERS_DIR ?? '../Substandard-Monsters';
 export const MONSTERS_PORT = 4173;
-/** Set MONSTERS_URL to test a deployed copy instead of the local folder. */
-export const MONSTERS_URL = process.env.MONSTERS_URL ?? `http://localhost:${MONSTERS_PORT}`;
+
+export const MONSTERS_URLS: Record<MonstersEnv, string> = {
+  live: process.env.MONSTERS_LIVE_URL ?? 'https://substandard-monsters.netlify.app',
+  dev: process.env.MONSTERS_DEV_URL ?? 'https://dev--substandard-monsters.netlify.app',
+  local: process.env.MONSTERS_LOCAL_URL ?? `http://localhost:${MONSTERS_PORT}`,
+};
+
+const requested = (process.env.MONSTERS_ENV ?? 'local').toLowerCase();
+if (!(requested in MONSTERS_URLS)) {
+  throw new Error(`MONSTERS_ENV must be live, dev or local (got "${process.env.MONSTERS_ENV}")`);
+}
+
+/** Which environment the tests run against; "custom" when MONSTERS_URL is set directly. */
+export const MONSTERS_ENV: MonstersEnv | 'custom' = process.env.MONSTERS_URL ? 'custom' : (requested as MonstersEnv);
+export const MONSTERS_URL = (process.env.MONSTERS_URL ?? MONSTERS_URLS[requested as MonstersEnv]).replace(/\/$/, '');
+/** True when the tests need Playwright to start the local web server. */
+export const MONSTERS_IS_LOCAL = MONSTERS_URL === MONSTERS_URLS.local.replace(/\/$/, '');

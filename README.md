@@ -10,9 +10,26 @@ sites on Chrome, Firefox and Edge in parallel, plus a mobile view, and draws res
 
 ## Substandard Monsters tests
 
-Playwright starts a small local web server for the `../Substandard-Monsters` folder, so the tests
-check whatever branch is checked out there. To use another folder set `MONSTERS_DIR`, or set
-`MONSTERS_URL` to test a deployed copy instead.
+### Environments: live, dev, local
+
+The same tests can run against three copies of the site (addresses in `sites.ts`, overridable in `.env`):
+
+| Environment | Variable (default address) | What it is |
+| --- | --- | --- |
+| `live` | `MONSTERS_LIVE_URL` (https://substandard-monsters.netlify.app) | The published site (`main` branch) |
+| `dev` | `MONSTERS_DEV_URL` (https://dev--substandard-monsters.netlify.app) | Netlify's preview of the `dev` branch, to test changes **before** publishing |
+| `local` | `MONSTERS_LOCAL_URL` (http://localhost:4173) | The `../Substandard-Monsters` folder on this PC (whatever branch is checked out); Playwright starts a small web server for it |
+
+`npm run tests` asks which one to use (or `--env=live|dev|local`). Plain Playwright runs use
+`MONSTERS_ENV` (default `local`): `npm run test:monsters:live`, `test:monsters:dev`, `test:monsters:local`.
+`MONSTERS_URL` overrides everything, e.g. for a Netlify deploy preview of a pull request.
+The runner checks that a deployed copy answers before testing it.
+
+**Before / after publishing:** push your changes to `dev`, run the tests against **dev**; when they pass,
+merge `dev` into `main` and run them again against **live**.
+
+The dev preview needs Netlify *branch deploys* switched on for `dev` (Site configuration > Build & deploy >
+Branches and deploy contexts > Branch deploys > add `dev`), and the site connected to the GitHub repo.
 
 The request form is never really sent: every call to FormSubmit is blocked or mocked
 (`fixtures/monsters.ts`), so test runs don't email you.
@@ -126,7 +143,7 @@ Or run Playwright directly:
 | `npm run test:chrome` / `test:firefox` / `test:edge` | One browser |
 | `npm run codegen` | Record clicks in a browser and generate test code |
 
-Point saucedemo tests elsewhere with `BASE_URL`; Monsters tests with `MONSTERS_URL` (see `sites.ts`).
+Point saucedemo tests elsewhere with `BASE_URL`; Monsters tests with `MONSTERS_ENV` / `MONSTERS_URL` (see `sites.ts`).
 
 ## Reports
 
@@ -180,7 +197,8 @@ internet connection, which is why they have a separate, looser limit. k6 exits w
 
 Results: a summary in the console, plus `reports/k6-<test>-report.html` (graphs you can open in a
 browser) and `reports/k6-<test>-summary.txt|json`. Point at another copy with
-`k6 run -e MONSTERS_URL=https://... perf/smoke.ts`. Keep the load small: the site runs on Netlify's free plan.
+`k6 run -e MONSTERS_URL=https://... perf/smoke.ts`; `npm run tests` passes the chosen environment for you
+(and starts the local web server when you pick `local`). Keep the load small: the site runs on Netlify's free plan.
 
 ## Test management (Testiny)
 

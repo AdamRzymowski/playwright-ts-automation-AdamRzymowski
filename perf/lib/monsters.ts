@@ -39,7 +39,8 @@ export function visitSite() {
   });
 
   group('Polish page', () => {
-    const res = http.get(`${BASE_URL}/pl`, params('page: /pl'));
+    // pl.html works locally and on Netlify (which also serves the tidy /pl).
+    const res = http.get(`${BASE_URL}/pl.html`, params('page: /pl'));
     pageTtfb.add(res.timings.waiting);
     check(res, {
       'pl: status 200': (r) => r.status === 200,

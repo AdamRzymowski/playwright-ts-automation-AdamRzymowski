@@ -2,8 +2,8 @@
 //
 // Non-interactive (CI or scripts):
 //   npm run tests -- --suite=ui|api|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
-//                    --perf=smoke|load  --testiny  --no-report
-import { spawnSync } from 'node:child_process';
+//                    --env=live|dev|local  --perf=smoke|load  --testiny  --no-report
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 
@@ -71,7 +71,42 @@ if (unknown.length) {
 }
 const playwrightSuites = suites.filter((s) => s !== 'perf');
 
-// 2. Follow-up questions, only when relevant
+// 2. Which copy of the Substandard Monsters site (same names and defaults as sites.ts)
+const ENVS = {
+  live: { label: 'Live', url: process.env.MONSTERS_LIVE_URL ?? 'https://substandard-monsters.netlify.app', detail: 'the published site' },
+  dev: { label: 'Dev', url: process.env.MONSTERS_DEV_URL ?? 'https://dev--substandard-monsters.netlify.app', detail: 'Netlify preview of the dev branch, before publishing' },
+  local: { label: 'Local', url: process.env.MONSTERS_LOCAL_URL ?? 'http://localhost:4173', detail: 'the ../Substandard-Monsters folder on this PC' },
+};
+let target = String(args.env ?? process.env.MONSTERS_ENV ?? (interactive ? '' : 'live')).toLowerCase();
+if (!target) {
+  console.log('\nWhich version of the Substandard Monsters site?\n');
+  Object.values(ENVS).forEach((e, i) => console.log(`  ${i + 1}) ${e.label}  - ${e.detail} (${e.url})`));
+  console.log('');
+  const pick = await ask('Your choice [1-3, default 1]: ', ['1', '2', '3', 'live', 'dev', 'local'], '1');
+  target = { 1: 'live', 2: 'dev', 3: 'local' }[pick] ?? pick;
+}
+if (!ENVS[target]) {
+  console.error(`Unknown environment "${target}". Use live, dev or local.`);
+  process.exit(2);
+}
+const siteUrl = (process.env.MONSTERS_URL ?? ENVS[target].url).replace(/\/$/, '');
+
+// Deployed copies must answer before we spend minutes testing them.
+if (target !== 'local') {
+  const status = await fetch(siteUrl, { method: 'HEAD' }).then((r) => r.status).catch(() => 0);
+  if (status !== 200) {
+    console.error(`\n${ENVS[target].label} site ${siteUrl} is not reachable (HTTP ${status || 'no answer'}).`);
+    if (target === 'dev') {
+      console.error(
+        'The dev preview only exists when Netlify branch deploys are on for the dev branch and dev has been pushed.\n' +
+          'Netlify: Site configuration > Build & deploy > Branches and deploy contexts > Branch deploys > add "dev".',
+      );
+    }
+    process.exit(1);
+  }
+}
+
+// 3. Follow-up questions, only when relevant
 let perfType = args.perf ?? 'smoke';
 if (suites.includes('perf') && !args.perf) {
   perfType = await ask('Performance test: (s)moke 30 s, 1 visitor or (l)oad ~2.5 min, up to 10 visitors? [s]: ', ['s', 'l', 'smoke', 'load'], 's');
@@ -89,12 +124,16 @@ if (playwrightSuites.length && interactive) {
 }
 rl?.close();
 
-// 3. Run
+// 4. Run
 const env = {
   ...process.env,
-  MONSTERS_URL: process.env.MONSTERS_URL ?? 'https://substandard-monsters.netlify.app',
+  MONSTERS_ENV: target,
+  MONSTERS_URL: siteUrl,
   ...(testiny ? { TESTINY_UPLOAD: '1' } : {}),
 };
+// Playwright starts the local server itself for MONSTERS_ENV=local, so let it decide.
+if (target === 'local' && !process.env.MONSTERS_URL) delete env.MONSTERS_URL;
+console.log(`\nSubstandard Monsters: ${ENVS[target].label} (${siteUrl})`);
 const run = (cmd) => {
   console.log(`\n> ${cmd}\n`);
   return spawnSync(cmd, { stdio: 'inherit', env, shell: true }).status ?? 1;
@@ -124,7 +163,14 @@ if (suites.includes('perf')) {
     console.error('\nk6 is not installed. Install it with: winget install k6 --source winget');
     results.push([`Performance (${perfType})`, 1]);
   } else {
-    const status = run(`npm run -s perf:${perfType}`);
+    // k6 has no web server of its own: serve the local folder while it runs.
+    const server =
+      target === 'local'
+        ? spawn('node', ['tools/serve-static.mjs', process.env.MONSTERS_DIR ?? '../Substandard-Monsters', '4173'], { stdio: 'ignore' })
+        : null;
+    if (server) await new Promise((r) => setTimeout(r, 800));
+    const status = run(`npm run -s perf:${perfType} -- -e MONSTERS_URL=${siteUrl}`);
+    server?.kill();
     results.push([`Performance (${perfType})`, status]);
     if (existsSync(`reports/k6-${perfType}-report.html`)) {
       console.log(`\nk6 dashboard: reports/k6-${perfType}-report.html`);
@@ -132,11 +178,11 @@ if (suites.includes('perf')) {
   }
 }
 
-// 4. PDF report of this run (reports/, git-ignored)
+// 5. PDF report of this run (reports/, git-ignored)
 let pdf = null;
 const pdfRun = spawnSync('node tools/report-pdf.mjs', {
   shell: true,
-  env: { ...env, RUN_STARTED: String(runStarted), REPORT_PLAYWRIGHT: playwrightSuites.length ? '1' : '0' },
+  env: { ...env, MONSTERS_URL: siteUrl, RUN_STARTED: String(runStarted), REPORT_PLAYWRIGHT: playwrightSuites.length ? '1' : '0' },
   encoding: 'utf8',
 });
 pdf = pdfRun.stdout?.match(/PDF report: (.+)/)?.[1]?.trim() ?? null;
@@ -144,8 +190,9 @@ if (!pdf) console.error(`
 Could not create the PDF report:
 ${pdfRun.stderr ?? ''}`);
 
-// 5. Summary
+// 6. Summary
 console.log('\n================ Summary ================');
+console.log(`  Site: ${ENVS[target].label} (${siteUrl})`);
 for (const [name, status] of results) console.log(`  ${status === 0 ? 'PASSED' : 'FAILED'}  ${name}`);
 if (testiny) console.log('  Results uploaded to Testiny (Automation tab).');
 if (pdf) console.log(`  PDF report: ${pdf}`);

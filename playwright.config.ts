@@ -1,12 +1,12 @@
 import './env';
 import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
-import { MONSTERS_DIR, MONSTERS_PORT, MONSTERS_URL, SAUCEDEMO_URL } from './sites';
+import { MONSTERS_DIR, MONSTERS_ENV, MONSTERS_IS_LOCAL, MONSTERS_PORT, MONSTERS_URL, SAUCEDEMO_URL } from './sites';
 
 /**
  * Sites under test (URLs in sites.ts):
  * - tests/saucedemo/  https://www.saucedemo.com, public e-commerce practice site (BASE_URL to override)
- * - tests/monsters/   Substandard Monsters website, served from the local ../Substandard-Monsters
- *                     folder (MONSTERS_DIR / MONSTERS_URL to override)
+ * - tests/monsters/   Substandard Monsters website: MONSTERS_ENV=live | dev | local (default local, the
+ *                     ../Substandard-Monsters folder); MONSTERS_URL overrides with any address
  *
  * Browsers run side by side: every desktop spec runs once per desktop project, every
  * mobile spec once per mobile project, spread across parallel workers.
@@ -64,6 +64,7 @@ export default defineConfig({
         suiteTitle: true,
         environmentInfo: {
           'Saucedemo URL': SAUCEDEMO_URL,
+          'Monsters environment': MONSTERS_ENV,
           'Monsters URL': MONSTERS_URL,
           Node: process.version,
           OS: process.platform,
@@ -124,8 +125,8 @@ export default defineConfig({
     },
   ],
 
-  /* Host the local Substandard Monsters folder while tests run (skipped when MONSTERS_URL is set). */
-  webServer: process.env.MONSTERS_URL
+  /* Host the local Substandard Monsters folder while tests run (only when testing the local copy). */
+  webServer: !MONSTERS_IS_LOCAL
     ? undefined
     : {
         command: `node tools/serve-static.mjs "${MONSTERS_DIR}" ${MONSTERS_PORT}`,
