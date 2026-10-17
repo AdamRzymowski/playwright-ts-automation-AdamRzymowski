@@ -145,6 +145,23 @@ Desktop or Mobile by `fixtures/base.ts`. Each run starts
 with empty `allure-results/`; run history is kept in `allure-history/`, so trend charts grow with every
 report you generate.
 
+## Where test results go
+
+Results never go into the git repository. Every output folder is in `.gitignore`, so GitHub only holds
+the test code.
+
+| Output | Where | How |
+| --- | --- | --- |
+| Allure report (interactive) | `allure-report/` on your PC, history in `allure-history/` | `npm run allure` / `npm run allure:open` |
+| **PDF report** | `reports/test-report-<date>_<time>.pdf` on your PC | Created automatically by `npm run tests`; or `npm run report:pdf` after any run |
+| Screenshots, videos, traces | `test-results/` (and inside the Allure report) | Kept for failed tests; `npm run report:full` keeps them for every test |
+| Testiny | Testiny cloud, Automation tab | Answer *yes* to the Testiny question in `npm run tests`, or `npm run test:testiny` |
+| k6 dashboards | `reports/k6-<test>-report.html` | `npm run perf:smoke` / `perf:load` |
+
+The PDF covers only the run that just finished: totals and a pass bar, results by platform (Desktop /
+Mobile / API), every failure with its error and screenshot, k6 thresholds and timings when performance
+tests ran, and a table of all tests with their result per browser.
+
 ## Performance tests (k6)
 
 [k6](https://grafana.com/docs/k6/latest/) scripts in `perf/` load the Substandard Monsters site the way a

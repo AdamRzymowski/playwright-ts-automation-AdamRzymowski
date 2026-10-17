@@ -100,6 +100,7 @@ const run = (cmd) => {
   return spawnSync(cmd, { stdio: 'inherit', env, shell: true }).status ?? 1;
 };
 const results = [];
+const runStarted = Date.now();
 
 if (playwrightSuites.length) {
   // UI = tests without an @api/@a11y tag. With UI chosen, leave out the tagged suites not chosen;
@@ -131,9 +132,22 @@ if (suites.includes('perf')) {
   }
 }
 
-// 4. Summary
+// 4. PDF report of this run (reports/, git-ignored)
+let pdf = null;
+const pdfRun = spawnSync('node tools/report-pdf.mjs', {
+  shell: true,
+  env: { ...env, RUN_STARTED: String(runStarted), REPORT_PLAYWRIGHT: playwrightSuites.length ? '1' : '0' },
+  encoding: 'utf8',
+});
+pdf = pdfRun.stdout?.match(/PDF report: (.+)/)?.[1]?.trim() ?? null;
+if (!pdf) console.error(`
+Could not create the PDF report:
+${pdfRun.stderr ?? ''}`);
+
+// 5. Summary
 console.log('\n================ Summary ================');
 for (const [name, status] of results) console.log(`  ${status === 0 ? 'PASSED' : 'FAILED'}  ${name}`);
 if (testiny) console.log('  Results uploaded to Testiny (Automation tab).');
+if (pdf) console.log(`  PDF report: ${pdf}`);
 console.log('=========================================\n');
 process.exit(results.some(([, s]) => s !== 0) ? 1 : 0);
