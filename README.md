@@ -112,7 +112,7 @@ Your choice [1-5, default 5]:
 ```
 
 then the follow-ups that apply: k6 smoke or load, upload to Testiny (only if `.env` has a key), and
-whether to open the Allure report. It ends with a PASSED/FAILED summary per suite. Monsters tests run
+whether to open the Allure report (it is always built after a Playwright run). It ends with a PASSED/FAILED summary per suite. Monsters tests run
 against the live site.
 
 **Skip the questions** by naming the suites (handy for CI, or to repeat a run):
@@ -124,7 +124,7 @@ against the live site.
 | `npm run tests -- --suite=a11y` | Accessibility tests |
 | `npm run tests -- --suite=perf --perf=smoke` | k6 smoke test (`--perf=load` for the load test) |
 | `npm run tests -- --suite=all` | Everything |
-| `npm run tests -- --suite=ui,a11y --no-report` | Several suites, without opening the report |
+| `npm run tests -- --suite=ui,a11y --no-report` | Several suites; the Allure report is still built, just not opened |
 
 Add `--testiny` to upload the Playwright results to Testiny.
 

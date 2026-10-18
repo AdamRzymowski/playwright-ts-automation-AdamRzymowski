@@ -3,7 +3,7 @@
 // Non-interactive (CI or scripts):
 //   npm run tests -- --suite=ui|api|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
 //                    --env=live|dev|local  --preview=<pull request number or preview URL>
-//                    --perf=smoke|load  --testiny  --no-report
+//                    --perf=smoke|load  --testiny  --no-report (still builds the Allure report, just doesn't open it)
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -174,6 +174,7 @@ const run = (cmd) => {
   return spawnSync(cmd, { stdio: 'inherit', env, shell: true }).status ?? 1;
 };
 const results = [];
+let allureBuilt = false;
 const runStarted = Date.now();
 
 if (playwrightSuites.length) {
@@ -188,8 +189,13 @@ if (playwrightSuites.length) {
     : ` --grep "${chosenTags.join('|')}"`;
   const name = playwrightSuites.map((s) => SUITES[s].label).join(' + ');
   results.push([name, run(`npx playwright test${filter}`)]);
-  if (openReport || process.env.CI) {
-    run(`npx allure generate allure-results${openReport && !process.env.CI ? ' --open' : ''}`);
+  // Always build the Allure report (allure-report/, git-ignored); opening it is optional.
+  const allureStatus = run('npx allure generate allure-results');
+  allureBuilt = allureStatus === 0;
+  if (allureBuilt && openReport && !process.env.CI) {
+    // Serve it in the background so the runner can finish; the viewer keeps running until closed.
+    spawn('npx allure open allure-report', { shell: true, detached: true, stdio: 'ignore' }).unref();
+    console.log('\nOpening the Allure report in your browser...');
   }
 }
 
@@ -230,6 +236,7 @@ console.log('\n================ Summary ================');
 console.log(`  Site: ${ENVS[target].label} (${siteUrl})`);
 for (const [name, status] of results) console.log(`  ${status === 0 ? 'PASSED' : 'FAILED'}  ${name}`);
 if (testiny) console.log('  Results uploaded to Testiny (Automation tab).');
+if (allureBuilt) console.log('  Allure report: allure-report/ (open it with npm run allure:open)');
 if (pdf) console.log(`  PDF report: ${pdf}`);
 console.log('=========================================\n');
 process.exit(results.some(([, s]) => s !== 0) ? 1 : 0);
