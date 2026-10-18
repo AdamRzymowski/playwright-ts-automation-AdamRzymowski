@@ -11,7 +11,7 @@ export const LABELS = {
     title: /3D Printing Service/,
     heading: /Monstrously good prints/,
     nav: { services: 'Services', gallery: 'Gallery', how: 'How it works', about: 'About Us', contact: 'Request a print' },
-    tabs: { resin: 'Resin printing', fdm: 'FDM printing', design: 'Design examples', painting: 'Painting' },
+    tabs: { resin: 'Resin printing', fdm: 'FDM printing', design: 'Design examples', painting: 'Miniatures and Terrain' },
     menuButton: 'Open menu',
     submit: 'Send request',
     requiredNote: '* Required fields',
@@ -27,7 +27,7 @@ export const LABELS = {
     title: /Usługi druku 3D/,
     heading: /Potwornie dobre wydruki/,
     nav: { services: 'Usługi', gallery: 'Galeria', how: 'Jak to działa', about: 'O nas', contact: 'Zamów wydruk' },
-    tabs: { resin: 'Druk żywiczny', fdm: 'Druk FDM', design: 'Przykładowe projekty', painting: 'Malowanie' },
+    tabs: { resin: 'Druk żywiczny', fdm: 'Druk FDM', design: 'Przykładowe projekty', painting: 'Figurki i makiety' },
     menuButton: 'Otwórz menu',
     submit: 'Wyślij zapytanie',
     requiredNote: '* Pola obowiązkowe',
@@ -133,6 +133,8 @@ export class MonstersPage {
 
   async goto(hash = '') {
     await this.page.goto(this.labels.path + hash);
+    // script.js fills in the footer version first; once it's there, the click handlers are attached too.
+    await this.page.waitForFunction(() => !!document.getElementById('site-version')?.textContent);
   }
 
   navLink(section: Section): Locator {

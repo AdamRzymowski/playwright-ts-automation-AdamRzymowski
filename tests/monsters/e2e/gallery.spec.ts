@@ -98,8 +98,10 @@ test.describe('Gallery', () => {
     });
 
     test('opens the clicked photo with its caption', async ({ site }) => {
-      await site.goto();
-      const item = site.gallery('resin').locator('.gallery-item').nth(1);
+      // Miniatures has many photos; the default Resin gallery may hold only one.
+      await site.goto('#gallery');
+      await site.tab('painting').click();
+      const item = site.gallery('miniatures').locator('.gallery-item').nth(1);
       const src = await item.locator('img').getAttribute('src');
       const caption = await item.locator('figcaption').textContent();
 

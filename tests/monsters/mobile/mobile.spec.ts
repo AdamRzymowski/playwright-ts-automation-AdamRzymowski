@@ -116,6 +116,9 @@ test.describe('Mobile view', () => {
 
     test('gallery photos fit the screen in one column', async ({ page, site }) => {
       await site.goto('#gallery');
+      // Needs at least two photos to compare; Miniatures has many, Resin may hold only one.
+      await site.tab('painting').tap();
+      await expect(site.visibleGallery()).toHaveAttribute('data-gallery', 'miniatures');
       const [first, second] = await site.boxes([
         '.gallery:not([hidden]) .gallery-item:nth-child(1)',
         '.gallery:not([hidden]) .gallery-item:nth-child(2)',
