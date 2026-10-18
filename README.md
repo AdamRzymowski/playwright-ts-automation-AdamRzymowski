@@ -141,6 +141,16 @@ its own complete run (Chrome, then Firefox, then Edge, ...), with its own Allure
 (`reports/test-report-<date>_<time>-<browser>.pdf`). The summary shows PASSED/FAILED per browser.
 Add `--together` to run all browsers in one combined run with a single report instead.
 
+**Watch the browser.** Answer *yes* to "Show the browser windows while testing?" (or add `--headed`) to see
+the tests click through the site. Headed runs go one test at a time so the window is watchable; add
+`--workers=4` to speed them up.
+
+**Desktop and mobile view on every browser.** A UI run tests each browser twice: at desktop size, and at
+phone size (Pixel 7, 412 x 915, touch). The phone-size runs (`mobile-chrome`, `mobile-firefox`,
+`mobile-edge`) repeat **every** desktop test plus the phone-only layout tests, so both layouts are checked
+on Chrome, Firefox and Edge. Firefox has no full mobile emulation, so it runs at phone size with touch and a
+mobile user agent.
+
 Add `--testiny` to upload the Playwright results to Testiny.
 
 **Without typing:** **Terminal > Run Task...** (or `Ctrl+Shift+P` > *Tasks: Run Task*) lists ready-made
@@ -231,7 +241,8 @@ the test code.
 | --- | --- | --- |
 | Allure report (interactive) | `allure-report/` on your PC, history in `allure-history/` | `npm run allure` / `npm run allure:open` |
 | **PDF report** | `reports/test-report-<date>_<time>.pdf` on your PC | Created automatically by `npm run tests`; or `npm run report:pdf` after any run |
-| Screenshots, videos, traces | `test-results/` (and inside the Allure report) | Kept for failed tests; `npm run report:full` keeps them for every test |
+| Screenshots | Inside the Allure and Playwright reports (`test-results/` while running) | **Every test, passed or failed**: a full-page screenshot at the end, plus an "after step" screenshot after each named `test.step()` |
+| Videos, traces | Same | Kept for failed tests; `npm run report:full` keeps every video |
 | Testiny | Testiny cloud, Automation tab | Answer *yes* to the Testiny question in `npm run tests`, or `npm run test:testiny` |
 | k6 dashboards | `reports/k6-<test>-report.html` | `npm run perf:smoke` / `perf:load` |
 

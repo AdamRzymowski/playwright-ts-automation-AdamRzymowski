@@ -39,6 +39,15 @@
       "problemMatcher": []
     },
     {
+      "label": "Tests: UI on desktop browsers, visible (live)",
+      "detail": "Chrome, Firefox and Edge with the browser window shown, one test at a time",
+      "type": "shell",
+      "command": "npm run tests -- --env=live --suite=ui --browsers=desktop --headed",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
       "label": "Tests: UI on BrowserStack Mac (live)",
       "detail": "Safari and Chrome on macOS in BrowserStack's cloud; needs keys in .env",
       "type": "shell",

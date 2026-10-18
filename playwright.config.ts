@@ -122,10 +122,14 @@ export default defineConfig({
     baseURL: SAUCEDEMO_URL,
     /* saucedemo marks elements with data-test="...", so getByTestId() reads that attribute. */
     testIdAttribute: 'data-test',
-    /* Headless by default; `npm run test:headed` or `npm run test:ui` to watch. */
-    headless: true,
-    /* Failures only by default; CAPTURE_ALL=1 (npm run report:full) keeps a screenshot and video of every test. */
-    screenshot: process.env.CAPTURE_ALL ? 'on' : 'only-on-failure',
+    /* Headless by default; HEADED=1 / --headed (npm run tests asks) shows the browser windows. */
+    headless: !process.env.HEADED,
+    /*
+     * Evidence for every test: a full-page screenshot at the end, whether it passed or failed.
+     * Named test.step() blocks also get an "after step" screenshot (fixtures/base.ts).
+     * Video: failures only by default; CAPTURE_ALL=1 (npm run report:full) keeps every video.
+     */
+    screenshot: { mode: 'on', fullPage: true },
     video: process.env.CAPTURE_ALL ? 'on' : 'retain-on-failure',
     trace: 'retain-on-failure',
   },
@@ -149,15 +153,29 @@ export default defineConfig({
       use: { ...devices['Desktop Edge'], channel: 'msedge' },
     },
 
-    /* Mobile emulation (viewport, touch, mobile user agent). Firefox has no mobile emulation. */
+    /*
+     * Mobile view: every desktop test PLUS the phone-only layout tests, on each browser at phone size
+     * (Pixel 7: 412 x 915, touch, mobile user agent).
+     */
     {
       name: 'mobile-chrome',
-      testMatch: MOBILE_SPECS,
+      testMatch: [DESKTOP_SPECS, MOBILE_SPECS],
       use: { ...devices['Pixel 7'] },
     },
     {
+      /* Firefox can't emulate a full mobile device (no isMobile), but runs at phone size with touch. */
+      name: 'mobile-firefox',
+      testMatch: [DESKTOP_SPECS, MOBILE_SPECS],
+      use: {
+        ...devices['Pixel 7'],
+        browserName: 'firefox',
+        isMobile: false,
+        userAgent: 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0',
+      },
+    },
+    {
       name: 'mobile-edge',
-      testMatch: MOBILE_SPECS,
+      testMatch: [DESKTOP_SPECS, MOBILE_SPECS],
       use: { ...devices['Pixel 7'], channel: 'msedge' },
     },
 

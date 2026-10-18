@@ -1,4 +1,4 @@
-import { test as base } from './base';
+import { test as base, setActivePage, withStepScreenshots } from './base';
 import { MonstersPage } from '../pages/monsters/MonstersPage';
 import { MONSTERS_URL } from '../sites';
 
@@ -15,27 +15,32 @@ type Fixtures = {
   site: MonstersPage;
   /** Polish page (pl.html). */
   sitePl: MonstersPage;
-  /** Always on: blocks real FormSubmit calls so tests never send emails, unless allowRealEmails is set. */
+  /** Always on: blocks real FormSubmit calls so tests never send emails, unless allowRealEmails is set.
+   *  Also tells step screenshots which page to capture. */
   blockRealEmails: void;
 };
 
-export const test = base.extend<Fixtures & Options>({
-  baseURL: MONSTERS_URL,
-  /* The site marks elements with data-testid="..." (saucedemo uses data-test). */
-  testIdAttribute: 'data-testid',
-  allowRealEmails: [false, { option: true }],
+export const test = withStepScreenshots(
+  base.extend<Fixtures & Options>({
+    baseURL: MONSTERS_URL,
+    /* The site marks elements with data-testid="..." (saucedemo uses data-test). */
+    testIdAttribute: 'data-testid',
+    allowRealEmails: [false, { option: true }],
 
-  blockRealEmails: [
-    async ({ page, allowRealEmails }, use) => {
-      // Registered first, so a test's own page.route(FORMSUBMIT, ...) mock takes priority.
-      if (!allowRealEmails) await page.route(FORMSUBMIT, (route) => route.abort('blockedbyclient'));
-      await use();
-    },
-    { auto: true },
-  ],
+    blockRealEmails: [
+      async ({ page, allowRealEmails }, use) => {
+        // Registered first, so a test's own page.route(FORMSUBMIT, ...) mock takes priority.
+        if (!allowRealEmails) await page.route(FORMSUBMIT, (route) => route.abort('blockedbyclient'));
+        setActivePage(page);
+        await use();
+        setActivePage(undefined);
+      },
+      { auto: true },
+    ],
 
-  site: async ({ page }, use) => use(new MonstersPage(page, 'en')),
-  sitePl: async ({ page }, use) => use(new MonstersPage(page, 'pl')),
-});
+    site: async ({ page }, use) => use(new MonstersPage(page, 'en')),
+    sitePl: async ({ page }, use) => use(new MonstersPage(page, 'pl')),
+  }),
+);
 
 export { expect } from '@playwright/test';

@@ -24,6 +24,7 @@ test.describe('Languages (EN / PL)', () => {
       await expect(page.locator('html')).toHaveAttribute('lang', 'pl');
       await expect(page).toHaveTitle(sitePl.labels.title);
       await expect(sitePl.heading).toHaveText(sitePl.labels.heading);
+      await sitePl.openMenuIfCollapsed();
       await expect(sitePl.navLink('gallery')).toBeVisible();
     });
 

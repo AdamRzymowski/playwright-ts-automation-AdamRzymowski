@@ -137,6 +137,19 @@ export class MonstersPage {
     await this.page.waitForFunction(() => !!document.getElementById('site-version')?.textContent);
   }
 
+  /** At phone width the menu is behind the ☰ button; open it if so (no-op on desktop). */
+  async openMenuIfCollapsed() {
+    if ((await this.menuButton.isVisible()) && (await this.menuButton.getAttribute('aria-expanded')) !== 'true') {
+      await this.menuButton.click();
+    }
+  }
+
+  /** Clicks a header link the way a user would on any screen size. */
+  async clickNav(section: Section) {
+    await this.openMenuIfCollapsed();
+    await this.navLink(section).click();
+  }
+
   navLink(section: Section): Locator {
     return this.page.getByTestId(NAV_TESTID[section]);
   }

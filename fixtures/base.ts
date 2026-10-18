@@ -1,4 +1,4 @@
-import { test as base } from '@playwright/test';
+import { test as base, type Page } from '@playwright/test';
 import * as allure from 'allure-js-commons';
 
 export type Platform = 'Desktop' | 'Mobile' | 'API';
@@ -26,3 +26,46 @@ export const test = base.extend<{ platformLabel: void }>({
     { auto: true },
   ],
 });
+
+// ---- Step screenshots ------------------------------------------------------------------------
+// Playwright already saves a screenshot at the end of every test (config: screenshot 'on').
+// These add one after each named test.step(), so the report shows what the page looked like when
+// each group of assertions passed, not only the final state.
+
+let activePage: Page | undefined;
+
+/** Called by the site fixtures so step screenshots know which page to capture. */
+export function setActivePage(page: Page | undefined) {
+  activePage = page;
+}
+
+async function attachStepScreenshot(title: string) {
+  if (!activePage || activePage.isClosed()) return;
+  try {
+    const body = await activePage.screenshot({ fullPage: true });
+    await base.info().attach(`after step: ${title}`, { body, contentType: 'image/png' });
+  } catch {
+    // A screenshot must never fail a test (e.g. the page is navigating).
+  }
+}
+
+/** Wraps test.step so every step that completes attaches an "after step" screenshot inside the step. */
+export function withStepScreenshots<T>(t: T): T {
+  const target = t as unknown as { step: (...args: unknown[]) => Promise<unknown> };
+  const original = target.step;
+  const wrapped = (title: string, body: (info: unknown) => unknown, options?: unknown) =>
+    original.call(
+      t,
+      title,
+      async (info: unknown) => {
+        const result = await body(info);
+        await attachStepScreenshot(title);
+        return result;
+      },
+      options,
+    );
+  // Keep test.step.skip and any other helpers hanging off the original.
+  Object.assign(wrapped, original);
+  target.step = wrapped as typeof original;
+  return t;
+}

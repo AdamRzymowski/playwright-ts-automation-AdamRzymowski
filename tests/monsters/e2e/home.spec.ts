@@ -27,7 +27,7 @@ test.describe('Home page', () => {
 
   for (const id of SECTIONS) {
     test(`nav link scrolls to #${id}`, async ({ page, site }) => {
-      await site.navLink(id).click();
+      await site.clickNav(id);
 
       await expect(page).toHaveURL(new RegExp(`#${id}$`));
       await expect(site.section(id)).toBeInViewport();

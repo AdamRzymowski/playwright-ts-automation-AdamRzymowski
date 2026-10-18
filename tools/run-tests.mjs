@@ -5,6 +5,7 @@
 //                    --env=live|dev|local  --preview=<pull request number or preview URL>
 //                    --browsers=desktop|mobile|browserstack|all (comma-separate several)
 //                    --together (one combined run instead of one run per browser)
+//                    --headed (show the browser windows; runs one test at a time unless --workers=N)
 //                    --perf=smoke|load  --testiny  --no-report (still builds the Allure report, just doesn't open it)
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
@@ -161,7 +162,7 @@ if (target !== 'local') {
 const HAS_BROWSERSTACK = Boolean(process.env.BROWSERSTACK_USERNAME && process.env.BROWSERSTACK_ACCESS_KEY);
 const BROWSER_SETS = {
   desktop: { label: 'Desktop: Chrome, Firefox, Edge', projects: ['chromium', 'firefox', 'edge'] },
-  mobile: { label: 'Mobile: Chrome and Edge on a phone-sized screen', projects: ['mobile-chrome', 'mobile-edge'] },
+  mobile: { label: 'Mobile view: Chrome, Firefox and Edge at phone size (all tests + phone layout tests)', projects: ['mobile-chrome', 'mobile-firefox', 'mobile-edge'] },
   browserstack: { label: 'BrowserStack: Safari and Chrome on a Mac', projects: ['bs-mac-safari', 'bs-mac-chrome'] },
 };
 const browserTests = playwrightSuites.filter((s) => s !== 'api');
@@ -169,7 +170,7 @@ let browserSets = args.browsers ? String(args.browsers).toLowerCase().split(',')
 if (browserSets?.includes('all')) browserSets = ['desktop', 'mobile', ...(HAS_BROWSERSTACK ? ['browserstack'] : [])];
 if (!browserSets && browserTests.length && interactive) {
   const options = [
-    ['Desktop + mobile (default)', ['desktop', 'mobile']],
+    ['Desktop + mobile view on every browser (default)', ['desktop', 'mobile']],
     [BROWSER_SETS.desktop.label, ['desktop']],
     [BROWSER_SETS.mobile.label, ['mobile']],
     ...(HAS_BROWSERSTACK
@@ -206,6 +207,15 @@ const browserProjects = browserTests.length ? browserSets.flatMap((b) => BROWSER
 const runApi = playwrightSuites.includes('api');
 // Default: every browser gets its own run, Allure report and PDF. --together runs them all at once.
 const together = Boolean(args.together);
+
+// Visible browser windows instead of headless (only meaningful for local browsers, not BrowserStack).
+let headed = Boolean(args.headed);
+if (!args.headed && browserTests.length && interactive) {
+  headed = (await ask('Show the browser windows while testing (headed)? (y/N): ', ['y', 'n', 'yes', 'no'], 'n')).startsWith('y');
+}
+// One window at a time is watchable; several parallel windows are not.
+const workerFlag = args.workers ? ` --workers=${args.workers}` : headed ? ' --workers=1' : '';
+const headedFlag = headed ? ' --headed' : '';
 
 let perfType = args.perf ?? 'smoke';
 if (suites.includes('perf') && !args.perf) {
@@ -246,6 +256,7 @@ const PROJECT_NAMES = {
   firefox: 'Firefox',
   edge: 'Edge',
   'mobile-chrome': 'Mobile Chrome',
+  'mobile-firefox': 'Mobile Firefox',
   'mobile-edge': 'Mobile Edge',
   'bs-mac-safari': 'Mac Safari (BrowserStack)',
   'bs-mac-chrome': 'Mac Chrome (BrowserStack)',
@@ -288,7 +299,7 @@ if (playwrightSuites.length) {
       : ''
     : ` --grep "${chosenTags.join('|')}"`;
   const name = browserTests.map((s) => SUITES[s].label).join(' + ');
-  const flags = (projects) => projects.map((p) => ` --project=${p}`).join('');
+  const flags = (projects) => projects.map((p) => ` --project=${p}`).join('') + (projects.some((p) => p !== 'api') ? headedFlag : '') + workerFlag;
 
   if (together || browserProjects.length <= 1) {
     const projects = [...browserProjects, ...(runApi ? ['api'] : [])];

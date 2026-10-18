@@ -8,13 +8,11 @@ test.describe('Mobile view', () => {
     await allure.feature('Mobile layout');
   });
 
-  test('runs with a phone viewport and touch', async ({ page, isMobile, browserName }) => {
-    test.skip(!isMobile, 'Only meaningful in a mobile project');
-
+  test('runs with a phone viewport and touch', async ({ page }) => {
+    // Checks the screen itself, so it also covers Firefox (phone size + touch, no full mobile emulation).
     const viewport = page.viewportSize();
     expect(viewport?.width).toBeLessThan(500);
     expect(await page.evaluate(() => navigator.maxTouchPoints)).toBeGreaterThan(0);
-    expect(browserName).toBe('chromium');
   });
 
   test('product cards stack in a single column', { tag: ['@smoke'] }, async ({ page, loggedIn }) => {

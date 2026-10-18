@@ -11,7 +11,9 @@ test.describe('Facebook links', () => {
   });
 
   for (const lang of ['en', 'pl'] as Lang[]) {
-    test(`each Facebook link opens the Facebook page in a new tab (${lang})`, { tag: ['@smoke'] }, async ({ page, site, sitePl }) => {
+    test(`each Facebook link opens the Facebook page in a new tab (${lang})`, { tag: ['@smoke'] }, async ({ page, site, sitePl, viewport }) => {
+      // Phone-sized projects (incl. Firefox, which has no isMobile emulation).
+      const isMobile = (viewport?.width ?? 1280) < 768;
       await allure.severity(allure.Severity.CRITICAL);
       const s = lang === 'en' ? site : sitePl;
       await s.goto();
@@ -32,10 +34,15 @@ test.describe('Facebook links', () => {
           await link.click();
           const [popup, response] = await Promise.all([popupPromise, responsePromise]);
 
-          // Facebook may land on the page itself or on a login/consent wall that keeps the page in the URL.
-          await popup.waitForURL(/facebook\.com/);
+          // The new tab asked Facebook for the right page and Facebook answered.
           expect.soft(response.status(), `${href} responds`).toBeLessThan(400);
-          expect.soft(decodeURIComponent(popup.url())).toContain(FACEBOOK_PAGE);
+          expect.soft(decodeURIComponent(response.url())).toContain(FACEBOOK_PAGE);
+          // On desktop the tab then shows the page (or a login wall that keeps it in the URL). With a phone
+          // user agent Facebook may hand off to its app instead of settling on a facebook.com page.
+          if (!isMobile) {
+            await popup.waitForURL(/facebook\.com/);
+            expect.soft(decodeURIComponent(popup.url())).toContain(FACEBOOK_PAGE);
+          }
           await allure.attachment(`facebook-${lang}-${i + 1}.png`, await popup.screenshot(), 'image/png');
 
           // The shop stays open in the original tab.

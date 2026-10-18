@@ -179,7 +179,9 @@ test.describe('Mobile view', () => {
       const request = createPrintRequest();
       await site.field('Name').tap();
       await site.fillRequest(request);
-      await site.submitButton.scrollIntoViewIfNeeded();
+      // Bring the button to mid-screen like a user would, so the reply below it is on screen too.
+      // (instant: the site uses smooth scrolling, and a tap mid-animation lands somewhere else)
+      await site.submitButton.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
       await site.submitButton.tap();
 
       await expect(site.formStatus).toHaveText(site.labels.ok);

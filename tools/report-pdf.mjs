@@ -34,6 +34,7 @@ const PROJECT_LABELS = {
   firefox: 'Firefox',
   edge: 'Edge',
   'mobile-chrome': 'Mobile Chrome',
+  'mobile-firefox': 'Mobile Firefox',
   'mobile-edge': 'Mobile Edge',
   api: 'API',
   'bs-mac-safari': 'Mac Safari (BrowserStack)',
