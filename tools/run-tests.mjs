@@ -3,6 +3,7 @@
 // Non-interactive (CI or scripts):
 //   npm run tests -- --suite=ui|api|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
 //                    --env=live|dev|local  --preview=<pull request number or preview URL>
+//                    --browsers=desktop|mobile|browserstack|all (comma-separate several)
 //                    --perf=smoke|load  --testiny  --no-report (still builds the Allure report, just doesn't open it)
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -155,6 +156,58 @@ if (target !== 'local') {
 }
 
 // 3. Follow-up questions, only when relevant
+// Which browsers (Playwright projects). API tests have their own project and always run when chosen.
+const HAS_BROWSERSTACK = Boolean(process.env.BROWSERSTACK_USERNAME && process.env.BROWSERSTACK_ACCESS_KEY);
+const BROWSER_SETS = {
+  desktop: { label: 'Desktop: Chrome, Firefox, Edge', projects: ['chromium', 'firefox', 'edge'] },
+  mobile: { label: 'Mobile: Chrome and Edge on a phone-sized screen', projects: ['mobile-chrome', 'mobile-edge'] },
+  browserstack: { label: 'BrowserStack: Safari and Chrome on a Mac', projects: ['bs-mac-safari', 'bs-mac-chrome'] },
+};
+const browserTests = playwrightSuites.filter((s) => s !== 'api');
+let browserSets = args.browsers ? String(args.browsers).toLowerCase().split(',') : null;
+if (browserSets?.includes('all')) browserSets = ['desktop', 'mobile', ...(HAS_BROWSERSTACK ? ['browserstack'] : [])];
+if (!browserSets && browserTests.length && interactive) {
+  const options = [
+    ['Desktop + mobile (default)', ['desktop', 'mobile']],
+    [BROWSER_SETS.desktop.label, ['desktop']],
+    [BROWSER_SETS.mobile.label, ['mobile']],
+    ...(HAS_BROWSERSTACK
+      ? [
+          [BROWSER_SETS.browserstack.label, ['browserstack']],
+          ['All: desktop, mobile and BrowserStack', ['desktop', 'mobile', 'browserstack']],
+        ]
+      : []),
+  ];
+  console.log('\nWhich browsers?\n');
+  options.forEach(([l], i) => console.log(`  ${i + 1}) ${l}`));
+  if (!HAS_BROWSERSTACK) console.log('  (BrowserStack Mac Safari/Chrome: add BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY to .env)');
+  console.log('');
+  const pick = await ask(`Your choice [1-${options.length}, default 1]: `, options.map((_, i) => String(i + 1)), '1');
+  browserSets = options[Number(pick) - 1][1];
+}
+browserSets ??= ['desktop', 'mobile'];
+const unknownSets = browserSets.filter((b) => !BROWSER_SETS[b]);
+if (unknownSets.length) {
+  console.error(`Unknown browsers "${unknownSets.join(', ')}". Use desktop, mobile, browserstack or all.`);
+  process.exit(2);
+}
+if (browserSets.includes('browserstack')) {
+  if (!HAS_BROWSERSTACK) {
+    console.error('BrowserStack needs BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY in .env (BrowserStack > Account > Access keys).');
+    process.exit(2);
+  }
+  if (target === 'local') {
+    console.error("BrowserStack's cloud browsers can't open this PC's local site. Pick live, dev or a preview.");
+    process.exit(2);
+  }
+}
+const projectFlags = [
+  ...(browserTests.length ? browserSets.flatMap((b) => BROWSER_SETS[b].projects) : []),
+  ...(playwrightSuites.includes('api') ? ['api'] : []),
+]
+  .map((p) => ` --project=${p}`)
+  .join('');
+
 let perfType = args.perf ?? 'smoke';
 if (suites.includes('perf') && !args.perf) {
   perfType = await ask('Performance test: (s)moke 30 s, 1 visitor or (l)oad ~2.5 min, up to 10 visitors? [s]: ', ['s', 'l', 'smoke', 'load'], 's');
@@ -201,7 +254,8 @@ if (playwrightSuites.length) {
       : ''
     : ` --grep "${chosenTags.join('|')}"`;
   const name = playwrightSuites.map((s) => SUITES[s].label).join(' + ');
-  results.push([name, run(`npx playwright test${filter}`)]);
+  const where = browserTests.length ? ` on ${browserSets.map((b) => b[0].toUpperCase() + b.slice(1)).join(' + ')}` : '';
+  results.push([`${name}${where}`, run(`npx playwright test${filter}${projectFlags}`)]);
   // Always build the Allure report (allure-report/, git-ignored); opening it is optional.
   const allureStatus = run('npx allure generate allure-results');
   allureBuilt = allureStatus === 0;

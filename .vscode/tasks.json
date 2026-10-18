@@ -30,6 +30,24 @@
       "problemMatcher": []
     },
     {
+      "label": "Tests: UI on desktop browsers (live)",
+      "detail": "Chrome, Firefox and Edge against the published site",
+      "type": "shell",
+      "command": "npm run test:desktop-ui",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: UI on BrowserStack Mac (live)",
+      "detail": "Safari and Chrome on macOS in BrowserStack's cloud; needs keys in .env",
+      "type": "shell",
+      "command": "npm run test:browserstack",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
       "label": "Tests: UI only",
       "type": "shell",
       "command": "npm run tests -- --suite=ui",

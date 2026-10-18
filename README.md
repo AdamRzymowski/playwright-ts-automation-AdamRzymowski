@@ -116,7 +116,8 @@ Which tests do you want to run?
 Your choice [1-5, default 5]:
 ```
 
-then the follow-ups that apply: k6 smoke or load, upload to Testiny (only if `.env` has a key), and
+then which site (live, dev, local or a pull request preview) and which **browsers** (desktop Chrome /
+Firefox / Edge, mobile, both, or BrowserStack Mac), then the follow-ups that apply: k6 smoke or load, upload to Testiny (only if `.env` has a key), and
 whether to open the Allure report (it is always built after a Playwright run). It ends with a PASSED/FAILED summary per suite. Monsters tests run
 against the live site.
 
@@ -126,6 +127,9 @@ against the live site.
 | --- | --- |
 | `npm run tests -- --suite=ui` | UI tests |
 | `npm run tests -- --suite=api` | API tests |
+| `npm run tests -- --suite=ui --browsers=desktop` | UI tests on Chrome, Firefox and Edge only (`mobile`, `browserstack`, `all` also work) |
+| `npm run test:desktop-ui` | Same, against the live site |
+| `npm run test:browserstack` | UI tests on Safari and Chrome on a Mac (BrowserStack), against the live site |
 | `npm run tests -- --suite=a11y` | Accessibility tests |
 | `npm run tests -- --suite=perf --perf=smoke` | k6 smoke test (`--perf=load` for the load test) |
 | `npm run tests -- --suite=all` | Everything |
@@ -195,6 +199,23 @@ preconditions, numbered steps with expected results, and the automated test it m
 After editing the source or the UI tests, run `npm run manual:build`. It rebuilds the CSV and PDF and checks
 that every automated UI test still has exactly one manual case (and points out any that don't).
 
+## BrowserStack: Safari and Chrome on a Mac
+
+For compatibility beyond this Windows PC, the desktop UI tests can run on real Macs in
+[BrowserStack](https://www.browserstack.com/automate/playwright)'s cloud: **Safari** (Playwright WebKit) and
+**Chrome** on macOS.
+
+1. In BrowserStack, open *Account > Access keys* and copy your username and access key.
+2. Put them in `.env` as `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY` (never commit them).
+3. Run `npm run test:browserstack`, or pick *BrowserStack* at the browsers question of `npm run tests`.
+
+The projects `bs-mac-safari` and `bs-mac-chrome` (in `playwright.config.ts`) only exist when the keys are
+set. Each run appears in the BrowserStack Automate dashboard under the build name (with video and logs),
+and in the Allure and PDF reports like any other browser. BrowserStack can't open this PC's local site, so
+use live, dev or a preview. Optional: `BROWSERSTACK_MAC_OS` (default Sonoma), `BROWSERSTACK_BUILD_NAME`.
+BrowserStack needs to support the Playwright version in `package.json`; if a run fails to connect with a
+version error, check their supported versions.
+
 ## Where test results go
 
 Results never go into the git repository. Every output folder is in `.gitignore`, so GitHub only holds
@@ -208,9 +229,13 @@ the test code.
 | Testiny | Testiny cloud, Automation tab | Answer *yes* to the Testiny question in `npm run tests`, or `npm run test:testiny` |
 | k6 dashboards | `reports/k6-<test>-report.html` | `npm run perf:smoke` / `perf:load` |
 
-The PDF covers only the run that just finished: totals and a pass bar, results by platform (Desktop /
-Mobile / API), every failure with its error and screenshot, k6 thresholds and timings when performance
-tests ran, and a table of all tests with their result per browser.
+The PDF covers only the run that just finished:
+- **Run details**: site and app version, test-code commit, machine, Node, Playwright and exact browser versions
+- **Totals** and pass bar; **by browser/device** (pass rate, time); **by feature and browser** grid; **by severity**
+- **Failures**: where (file:line), severity, which browsers failed/passed, the failing step, the error with
+  expected/received, and a screenshot
+- **Skipped tests** with the reason, the **slowest tests**, k6 thresholds and timings when performance ran
+- **All tests** grid: result per browser with its duration
 
 ## Performance tests (k6)
 

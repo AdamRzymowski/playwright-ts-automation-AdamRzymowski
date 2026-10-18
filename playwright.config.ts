@@ -19,6 +19,49 @@ const MOBILE_SPECS = /[\\/]mobile[\\/].*\.spec\.ts$/;
 const API_SPECS = /[\\/]api[\\/].*\.spec\.ts$/;
 
 /*
+ * BrowserStack: real Macs in the cloud for Safari (WebKit) and Chrome compatibility runs.
+ * Only added when BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY are set (e.g. in .env).
+ * Cloud browsers can't reach this PC's local site, so use MONSTERS_ENV=live/dev or a preview.
+ * Docs: https://www.browserstack.com/docs/automate/playwright/playwright-capabilities
+ */
+const BS_USER = process.env.BROWSERSTACK_USERNAME;
+const BS_KEY = process.env.BROWSERSTACK_ACCESS_KEY;
+const BS_BUILD = process.env.BROWSERSTACK_BUILD_NAME ?? `Playwright TS Automation ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
+const PW_VERSION: string = require('@playwright/test/package.json').version;
+function browserstack(browser: 'playwright-webkit' | 'chrome') {
+  const caps = {
+    browser,
+    os: 'osx',
+    os_version: process.env.BROWSERSTACK_MAC_OS ?? 'Sonoma',
+    ...(browser === 'chrome' ? { browser_version: 'latest' } : {}),
+    project: 'Playwright TS Automation',
+    build: BS_BUILD,
+    name: `Mac ${browser === 'chrome' ? 'Chrome' : 'Safari'}`,
+    'browserstack.username': BS_USER,
+    'browserstack.accessKey': BS_KEY,
+    'client.playwrightVersion': PW_VERSION,
+  };
+  return { wsEndpoint: `wss://cdp.browserstack.com/playwright?caps=${encodeURIComponent(JSON.stringify(caps))}` };
+}
+const browserstackProjects =
+  BS_USER && BS_KEY
+    ? [
+        {
+          name: 'bs-mac-safari',
+          testMatch: DESKTOP_SPECS,
+          timeout: 90_000,
+          use: { ...devices['Desktop Safari'], browserName: 'webkit' as const, connectOptions: browserstack('playwright-webkit') },
+        },
+        {
+          name: 'bs-mac-chrome',
+          testMatch: DESKTOP_SPECS,
+          timeout: 90_000,
+          use: { ...devices['Desktop Chrome'], browserName: 'chromium' as const, connectOptions: browserstack('chrome') },
+        },
+      ]
+    : [];
+
+/*
  * Testiny (test management): uploads test cases and a test run when TESTINY_UPLOAD=1 (npm run test:testiny).
  * Needs TESTINY_API_KEY and TESTINY_PROJECT, e.g. in .env (see .env.example).
  */
@@ -123,6 +166,9 @@ export default defineConfig({
       name: 'api',
       testMatch: API_SPECS,
     },
+
+    /* Mac Safari and Chrome on BrowserStack (only with credentials; npm run tests > BrowserStack). */
+    ...browserstackProjects,
   ],
 
   /* Host the local Substandard Monsters folder while tests run (only when testing the local copy). */
