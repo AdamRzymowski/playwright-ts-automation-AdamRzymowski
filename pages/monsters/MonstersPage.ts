@@ -29,6 +29,17 @@ export const LABELS = {
       descriptionMissing: 'Describe what you need',
       minWords: 'At least 5 words',
       tooLong: (n: number) => `Max. ${n} characters`,
+      link: 'Enter a valid link',
+      sql: 'Looks like database code',
+    },
+    sqlWarning:
+      'Part of your request looks like database code (SQL), so it was not sent. Please describe what you need in plain words.',
+    // v1.7.0+: success pop-up
+    dialog: {
+      title: 'Request sent!',
+      text: "Thanks for your request. I'll get back to you with a quote, usually within a day or two. Keep an eye on your inbox (and spam folder).",
+      close: 'Great, thanks',
+      x: 'Close',
     },
     languageField: 'English',
     subjectSuffix: '',
@@ -55,6 +66,16 @@ export const LABELS = {
       descriptionMissing: 'Opisz zamówienie',
       minWords: 'Min. 5 słów',
       tooLong: (n: number) => `Maks. ${n} znaków`,
+      link: 'Podaj poprawny link',
+      sql: 'Wygląda jak kod bazy danych',
+    },
+    sqlWarning:
+      'Część zapytania wygląda jak kod bazy danych (SQL), więc nie zostało wysłane. Opisz, czego potrzebujesz, zwykłymi słowami.',
+    dialog: {
+      title: 'Zapytanie wysłane!',
+      text: 'Dziękuję za zapytanie. Odezwę się z wyceną, zwykle w ciągu jednego lub dwóch dni. Zajrzyj do skrzynki (także do folderu spam).',
+      close: 'Super, dzięki',
+      x: 'Zamknij',
     },
     languageField: 'Polski',
     subjectSuffix: ' [PL]',
@@ -221,6 +242,30 @@ export class MonstersPage {
   /** The red badge the site shows inside a field when it has a problem (v1.6.0+). */
   fieldError(name: FormField): Locator {
     return this.page.getByTestId(`${FORM_FIELDS[name]}-error`);
+  }
+
+  /** Success pop-up shown after a request is sent (v1.7.0+). */
+  get successDialog(): Locator {
+    return this.page.getByTestId('success-dialog');
+  }
+  get successTitle(): Locator {
+    return this.page.getByTestId('success-dialog-title');
+  }
+  get successText(): Locator {
+    return this.page.getByTestId('success-dialog-text');
+  }
+  /** The main "Great, thanks" button. */
+  get successClose(): Locator {
+    return this.page.getByTestId('success-dialog-close');
+  }
+  /** The × in the corner. */
+  get successX(): Locator {
+    return this.page.getByTestId('success-dialog-x');
+  }
+
+  /** Warning block above the Send button when a field looks like database code (SQL) (v1.8.0+). */
+  get sqlWarning(): Locator {
+    return this.page.getByTestId('form-sql-warning');
   }
 
   /** The live "123 / 1000" counter under the description. */

@@ -3,10 +3,10 @@
 // Each case: title, site, area, platform, priority, preconditions, steps [action, expected result], automated test.
 
 export const CASE_VERSION = '1.0';
-export const WRITTEN = '2026-10-18 (updated for site v1.6.0)';
+export const WRITTEN = '2026-10-18 (updated for site v1.7.0 / v1.8.0)';
 
 export const SITES = {
-  monsters: { name: 'Substandard Monsters', url: 'https://substandard-monsters.com', appVersion: '1.6.0 (footer "v1.6.0")' },
+  monsters: { name: 'Substandard Monsters', url: 'https://substandard-monsters.com', appVersion: '1.7.0 live / 1.8.0 dev (footer version)' },
   saucedemo: { name: 'Sauce Demo', url: 'https://www.saucedemo.com', appVersion: 'Public demo site (not versioned)' },
 };
 
@@ -79,7 +79,7 @@ export const CASES = [
     area: 'Home page > Footer',
     priority: 'Low',
     pre: M_OPEN,
-    steps: [['Scroll to the footer, bottom left.', 'A version like "v1.6.0" is shown (three numbers separated by dots).']],
+    steps: [['Scroll to the footer, bottom left.', 'A version like "v1.7.0" is shown (three numbers separated by dots).']],
     auto: 'monsters/e2e/home.spec.ts › footer shows the site version',
   }),
   m({
@@ -300,7 +300,8 @@ export const CASES = [
     pre: M_OPEN + ' Click "Request a print". This sends a real email to the owner: use TEST data.',
     steps: [
       ['Fill in every field: name "TEST Tester", email adamrzymowski@gmail.com, Service "Not sure", Quantity 2, link https://example.com, description "TEST manual check of the request form, please ignore".', 'All fields accept the input.'],
-      ['Click "Send request".', '"Sending…" shows briefly, then "Thanks! Your request has been sent. I\'ll be in touch soon."'],
+      ['Click "Send request".', '"Sending…" shows briefly, then the "Request sent!" pop-up opens; behind it the form says "Thanks! Your request has been sent. I\'ll be in touch soon."'],
+      ['Click "Great, thanks".', 'The pop-up closes.'],
       ['Look at the form.', 'All fields are cleared; Quantity is back to 1; the button is enabled.'],
       ['Check the owner\'s inbox.', 'An email "Not sure request from TEST Tester - Substandard Monsters" lists every field and Language "English".'],
     ],
@@ -922,6 +923,8 @@ export const CASES = [
     ['with a #section', 'https://www.myminifactory.com/object/3d-print-dragon-12345#comments'],
     ['http (not https)', 'http://example.com/models/dragon.3mf'],
     ['encoded space', 'https://example.com/my%20files/dragon%20v2.stl'],
+    ['without https://', 'drive.google.com/file/d/1AbCdEf/view'],
+    ['two links', 'https://www.thingiverse.com/thing:2187167, https://www.printables.com/model/3161-3d-benchy'],
   ].map(([kind, link]) =>
     m({
       title: `File link accepts a ${kind} link and sends it unchanged`,
@@ -946,12 +949,183 @@ export const CASES = [
       title: `File link flags a malformed link: ${kind}`,
       area: 'Request a print > File link',
       priority: kind === 'javascript link' ? 'High' : 'Medium',
-      pre: M_OPEN + ' Click "Request a print". ' + NO_EMAIL + ' NOTE: site v1.6.0 does not check link format yet, so this case currently fails.',
+      pre: M_OPEN + ' Click "Request a print". ' + NO_EMAIL,
       steps: [
         [`Fill in the required fields and type "${link}" as the link.`, 'Field accepts the text.'],
-        ['Click "Send request".', 'The link field turns red with a badge asking for a valid web address (http:// or https://); nothing is sent.'],
+        ['Click "Send request".', 'The link field turns red with the badge "Enter a valid link"; nothing is sent.'],
       ],
       auto: `monsters/e2e/file-link.spec.ts › flags a malformed link: ${kind}`,
     }),
   ),
+  // ================================================================ Added for site v1.7.0 / v1.8.0
+
+  // ---------------------------------------------------------------- Success pop-up (v1.7.0)
+  m({
+    title: 'Success pop-up appears after a request is sent',
+    area: 'Request a print > Success pop-up',
+    priority: 'Critical',
+    pre: M_OPEN + ' Click "Request a print". Sends a real email: use TEST data.',
+    steps: [
+      ['Fill in the required fields and click "Send request".', 'A pop-up opens over the page: tick icon, title "Request sent!", text "Thanks for your request. I\'ll get back to you with a quote, usually within a day or two. Keep an eye on your inbox (and spam folder).", button "Great, thanks" and an × in the corner.'],
+      ['Look behind the pop-up.', 'The form is cleared and says "Thanks! Your request has been sent. I\'ll be in touch soon."'],
+    ],
+    auto: 'monsters/e2e/success-dialog.spec.ts › appears after a successful send with the right content',
+  }),
+  m({
+    title: 'Success pop-up is modal: focus on its button, page behind blocked',
+    area: 'Request a print > Success pop-up',
+    pre: M_OPEN + ' Click "Request a print". Sends a real email: use TEST data.',
+    steps: [
+      ['Send a request.', 'The "Great, thanks" button has keyboard focus (focus ring visible after pressing Tab/Shift+Tab).'],
+      ['Try to click the form behind the pop-up.', 'Nothing behind it reacts while the pop-up is open.'],
+    ],
+    auto: 'monsters/e2e/success-dialog.spec.ts › is a proper modal: focus on its button, page behind not clickable',
+  }),
+  ...[
+    ['"Great, thanks" button', 'button', 'Click "Great, thanks".'],
+    ['× button', 'x', 'Click the × in the corner.'],
+    ['Escape key', 'escape', 'Press Escape.'],
+    ['dark backdrop', 'backdrop', 'Click the dark area outside the pop-up.'],
+  ].map(([label, , action]) =>
+    m({
+      title: `Success pop-up closes with the ${label}`,
+      area: 'Request a print > Success pop-up',
+      pre: M_OPEN + ' Click "Request a print". Send a TEST request so the pop-up opens.',
+      steps: [
+        [action, 'The pop-up closes.'],
+        ['Type in Your name.', 'The page works normally again.'],
+      ],
+      auto: `monsters/e2e/success-dialog.spec.ts › closes with the ${label}`,
+    }),
+  ),
+  m({
+    title: 'Success pop-up stays open when clicking inside it',
+    area: 'Request a print > Success pop-up',
+    priority: 'Low',
+    pre: M_OPEN + ' Send a TEST request so the pop-up opens.',
+    steps: [['Click the pop-up\'s text.', 'The pop-up stays open.']],
+    auto: 'monsters/e2e/success-dialog.spec.ts › stays open when clicking inside it',
+  }),
+  m({
+    title: 'Success pop-up does not appear when sending fails or the form has errors',
+    area: 'Request a print > Success pop-up',
+    priority: 'High',
+    pre: M_OPEN + ' Click "Request a print". DevTools > Network ready to block "formsubmit.co".',
+    steps: [
+      ['Click "Send request" on the empty form.', 'Red badges and "Please check the fields marked in red."; no pop-up.'],
+      ['Block formsubmit.co, fill in the form correctly and send.', 'Red error message; no pop-up.'],
+    ],
+    auto: 'monsters/e2e/success-dialog.spec.ts › does not appear when sending fails or the form has errors',
+  }),
+  m({
+    title: 'Success pop-up appears again for a second request',
+    area: 'Request a print > Success pop-up',
+    priority: 'Low',
+    pre: M_OPEN + ' Sends two real emails: use TEST data.',
+    steps: [
+      ['Send a request and close the pop-up.', 'The pop-up closes.'],
+      ['Fill in the form again and send.', 'The pop-up opens again.'],
+    ],
+    auto: 'monsters/e2e/success-dialog.spec.ts › appears again for a second request',
+  }),
+  m({
+    title: 'Success pop-up fits on the screen and is readable',
+    area: 'Request a print > Success pop-up',
+    pre: M_OPEN + ' Send a TEST request. Repeat at phone size (DevTools device mode).',
+    steps: [['Look at the pop-up on desktop and on a phone screen.', 'It is fully on screen, the button is visible without scrolling, and all text is clearly readable.']],
+    auto: 'monsters/e2e/success-dialog.spec.ts › fits on the screen and its text is readable',
+  }),
+  m({
+    title: 'Success pop-up is in Polish on the Polish page',
+    area: 'Request a print > Success pop-up',
+    pre: M_OPEN_PL + ' Send a TEST request.',
+    steps: [['Read the pop-up.', 'Title "Zapytanie wysłane!", text starting "Dziękuję za zapytanie.", button "Super, dzięki", × labelled "Zamknij".']],
+    auto: 'monsters/e2e/success-dialog.spec.ts › Polish page shows the pop-up in Polish',
+  }),
+
+  // ---------------------------------------------------------------- SQL guard (v1.8.0, dev)
+  ...[
+    ['always-true login trick', "admin' OR '1'='1"],
+    ['numeric always-true', "' OR 1=1 --"],
+    ['UNION SELECT', '1 UNION SELECT username, password FROM users'],
+    ['DROP TABLE', "'; DROP TABLE users; --"],
+    ['SELECT * FROM', 'SELECT * FROM orders'],
+    ['DELETE FROM … WHERE', 'DELETE FROM orders WHERE 1=1'],
+    ['INSERT INTO … VALUES', "INSERT INTO users (name) VALUES ('x')"],
+    ['UPDATE … SET', "UPDATE users SET role='admin' WHERE id=1"],
+    ['time delay probe', '1 AND SLEEP(5)'],
+    ['comment after a quote', "admin'--"],
+  ].map(([kind, sample]) =>
+    m({
+      title: `SQL guard blocks ${kind} in the description`,
+      area: 'Security > SQL guard',
+      priority: 'High',
+      pre: M_OPEN + ' Click "Request a print". Block "formsubmit.co" in DevTools > Network as a safety net (nothing should be sent anyway).',
+      steps: [
+        [`Fill in the required fields; in the description type a normal sentence followed by: ${sample}`, 'Fields accept the input.'],
+        ['Click "Send request".', 'The description shows the red badge "Looks like database code"; the warning "Part of your request looks like database code (SQL), so it was not sent. Please describe what you need in plain words." appears above the button; no pop-up; no request in the Network tab.'],
+      ],
+      auto: `monsters/e2e/sql-guard.spec.ts › blocks ${kind} in the description`,
+    }),
+  ),
+  ...['Name', 'File link'].map((field) =>
+    m({
+      title: `SQL guard blocks SQL in the ${field === 'Name' ? 'Your name' : 'link'} field`,
+      area: 'Security > SQL guard',
+      pre: M_OPEN + ' Click "Request a print". Block "formsubmit.co" as a safety net.',
+      steps: [
+        [`Fill in the form correctly, then type x'; DROP TABLE users; -- in ${field === 'Name' ? 'Your name' : 'the link field'}.`, 'Field accepts the input.'],
+        ['Click "Send request".', 'That field shows "Looks like database code"; the SQL warning appears; nothing is sent.'],
+      ],
+      auto: `monsters/e2e/sql-guard.spec.ts › blocks SQL in the ${field} field`,
+    }),
+  ),
+  ...[
+    ['select … from', 'Please select a colour from the list, black or red, for this dragon.'],
+    ['"drop table" (gaming)', 'I need a drop table for my D&D game, printed in grey PLA please.'],
+    ['"delete from"', 'Can you delete from the order the second dragon and make it bigger?'],
+    ['"insert into"', 'Insert into the base two magnets please, so the model sticks to the board.'],
+    ['apostrophes and dashes', "It's for my son's birthday (he's 7); the 'big' one -- thanks a lot!"],
+    ['quotes and equals', "Print 'Dragon' or 'Wyvern' = whichever is cheaper, in red PETG please."],
+  ].map(([kind, text]) =>
+    m({
+      title: `SQL guard lets normal text through: ${kind}`,
+      area: 'Security > SQL guard',
+      priority: 'High',
+      pre: M_OPEN + ' Click "Request a print". Sends a real email: use TEST data (or block formsubmit.co and expect the network error instead of success).',
+      steps: [
+        [`Fill in the required fields with the description: ${text}`, 'No red badge, no SQL warning.'],
+        ['Click "Send request".', 'The request is sent normally (thank-you message and pop-up).'],
+      ],
+      auto: `monsters/e2e/sql-guard.spec.ts › lets normal text through: ${kind}`,
+    }),
+  ),
+  m({
+    title: 'SQL warning clears once the text is fixed',
+    area: 'Security > SQL guard',
+    pre: M_OPEN + ' Click "Request a print".',
+    steps: [
+      ['Send with a description ending in SELECT * FROM users.', 'SQL warning and badge appear; nothing sent.'],
+      ['Replace the description with a normal sentence.', 'Warning and badge disappear while typing.'],
+      ['Click "Send request" (TEST data).', 'The request is sent normally.'],
+    ],
+    auto: 'monsters/e2e/sql-guard.spec.ts › warning clears once the text is fixed, then the request can be sent',
+  }),
+  m({
+    title: 'SQL warning is in Polish on the Polish page',
+    area: 'Security > SQL guard',
+    pre: M_OPEN_PL + ' Scroll to the form. Block "formsubmit.co" as a safety net.',
+    steps: [
+      ["Fill in the form; end the description with ' OR 1=1 -- and click \"Wyślij zapytanie\".", 'Badge "Wygląda jak kod bazy danych" and warning "Część zapytania wygląda jak kod bazy danych (SQL), więc nie zostało wysłane. …"; nothing sent.'],
+    ],
+    auto: 'monsters/e2e/sql-guard.spec.ts › warning is shown in Polish on the Polish page',
+  }),
+  m({
+    title: 'SQL warning block is readable',
+    area: 'Security > SQL guard',
+    priority: 'Low',
+    pre: M_OPEN + ' Trigger the SQL warning as above.',
+    steps: [['Check the warning\'s contrast in DevTools.', 'Light text on dark red, at least 4.5:1.']],
+    auto: 'monsters/e2e/sql-guard.spec.ts › warning block is readable',
+  }),
 ];

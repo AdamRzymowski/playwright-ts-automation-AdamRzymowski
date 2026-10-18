@@ -6,8 +6,8 @@ happen, and the automated tests that cover it (they fail while the bug is open).
 | ID | Issue | Severity | Status | Found in |
 | --- | --- | --- | --- | --- |
 | [KI-001](#ki-001-no-upper-character-limit-on-what-the-request-form-sends) | No upper character limit on what the request form sends | Medium | Partly fixed in v1.6.0 | v1.4.3 |
-| [KI-002](#ki-002-service-dropdown-text-is-white-on-white-after-a-failed-check) | Service dropdown text is white on white after a failed check | High | Open | v1.6.0 |
-| [KI-003](#ki-003-link-field-accepts-text-that-is-not-a-web-address) | Link field accepts text that is not a web address | Medium | Open | v1.6.0 |
+| [KI-002](#ki-002-service-dropdown-text-is-white-on-white-after-a-failed-check) | Service dropdown text is white on white after a failed check | High | Fixed in v1.6.1 (confirm by hand) | v1.6.0 |
+| [KI-003](#ki-003-link-field-accepts-text-that-is-not-a-web-address) | Link field accepts text that is not a web address | Medium | Fixed in v1.6.1 | v1.6.0 |
 | [KI-004](#ki-004-facebook-button-text-contrast-too-low) | Facebook button text contrast too low (found by automated tests) | Low | Open | v1.4.3 |
 | [KI-005](#ki-005-gallery-photos-cannot-be-opened-with-the-keyboard) | Gallery photos cannot be opened with the keyboard (found by automated tests) | Medium | Open | v1.4.3 |
 | [KI-006](#ki-006-owners-email-address-is-public-in-the-form-and-captcha-is-off) | Owner's email address is public in the form, and captcha is off | Medium | Open | v1.3.0 |
@@ -57,7 +57,8 @@ Netlify Function) that checks the limits before forwarding.
 ## KI-002: Service dropdown text is white on white after a failed check
 
 - **Severity:** High (visitors can't read the options they must choose from)
-- **Status:** Open
+- **Status:** Fixed in v1.6.1 ("keep the Service dropdown readable"). The open option list is drawn by the
+  operating system, so confirm by hand on Windows, macOS and a phone.
 - **Area:** Request a print form, Service dropdown
 
 **Steps to reproduce**
@@ -90,7 +91,8 @@ it. Check it by hand with manual case *"Text is readable against its background:
 ## KI-003: Link field accepts text that is not a web address
 
 - **Severity:** Medium (and a security concern for the `javascript:` case)
-- **Status:** Open
+- **Status:** Fixed in v1.6.1: each link must look like a web address (`https://` optional); anything else
+  gets "Enter a valid link". Confirmed by `file-link.spec.ts` passing on the live site (v1.7.0).
 - **Area:** Request a print form, "Link to your file or reference photos"
 
 **Steps to reproduce**
@@ -164,6 +166,10 @@ FormSubmit simply leave empty.
 **Possible fix:** replace the email in the action with the random alias FormSubmit gives after
 activation (described in the site's SETUP-GUIDE.md), and consider a server-side check (Netlify Function)
 or a captcha that works with AJAX submissions.
+
+**Related (v1.8.0, dev):** the page now stops text shaped like database commands (SQL) with a warning and
+doesn't send it (`sql-guard.spec.ts`). Like the length limits, it runs only in the page, so it catches
+casual attempts but not requests posted straight to FormSubmit; the fixes above are still needed.
 
 **Automated tests:** `tests/monsters/api/formsubmit.spec.ts` checks the form's FormSubmit address; the
 contract test will need its expectation updated when the alias is used.

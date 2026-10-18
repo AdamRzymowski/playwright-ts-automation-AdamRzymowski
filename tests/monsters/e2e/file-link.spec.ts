@@ -4,11 +4,10 @@ import { createPrintRequest } from '../../utils/testData';
 import { parseMultipart } from '../../utils/multipart';
 
 // "Link to your file or reference photos" (optional field, name "File link").
-// Rule tested here: if a link is given, it must be a web address starting with http:// or https://
-// and have a site name; it is sent exactly as typed.
-// NOTE: as of site v1.6.0 the field is plain text and only its length is checked, so the
-// "malformed links are flagged" tests fail until the site adds a link check (findings, like the
-// accessibility failures).
+// Rule (site v1.6.1+): if links are given (several may be separated by spaces, commas or new lines), each
+// must be a web address with a real-looking site name (name.com); "https://" is optional. Links are sent
+// exactly as typed. Anything else gets the badge "Enter a valid link" and is not sent.
+// (Up to v1.6.0 any text was accepted: KNOWN-ISSUES.md KI-003.)
 
 const VALID_LINKS = {
   Thingiverse: 'https://www.thingiverse.com/thing:2187167',
@@ -18,6 +17,8 @@ const VALID_LINKS = {
   'with a #section': 'https://www.myminifactory.com/object/3d-print-dragon-12345#comments',
   'http (not https)': 'http://example.com/models/dragon.3mf',
   'encoded space': 'https://example.com/my%20files/dragon%20v2.stl',
+  'without https://': 'drive.google.com/file/d/1AbCdEf/view',
+  'two links': 'https://www.thingiverse.com/thing:2187167, https://www.printables.com/model/3161-3d-benchy',
 };
 
 const MALFORMED_LINKS = {
@@ -67,16 +68,17 @@ test.describe('Request form: file link format', () => {
       await expect(site.formStatus).toHaveText(site.labels.ok);
       await expect(site.fieldError('File link')).toHaveCount(0);
       expect(sent['File link']).toBe(link);
-      // Sanity check of the test data itself: a real http(s) web address.
-      expect(new URL(link).protocol).toMatch(/^https?:$/);
+      // Sanity check of the test data itself: each part is a real http(s) web address (scheme optional).
+      for (const part of link.split(/[\s,]+/).filter(Boolean)) {
+        expect(new URL(/^https?:\/\//.test(part) ? part : `https://${part}`).protocol).toMatch(/^https?:$/);
+      }
     });
   }
 
   for (const [kind, link] of Object.entries(MALFORMED_LINKS)) {
     test(`flags a malformed link: ${kind}`, async ({ page, site }) => {
       await allure.description(
-        'Expected: the form marks the link field (red badge, aria-invalid) and does not send. ' +
-          'Fails while the site accepts any text in this field (v1.6.0).',
+        'The form marks the link field with "Enter a valid link" and does not send (fixed in v1.6.1, KI-003).',
       );
       let calls = 0;
       await page.route(FORMSUBMIT, (route) => {
@@ -87,7 +89,7 @@ test.describe('Request form: file link format', () => {
       await site.fillRequest(createPrintRequest({ fileLink: link }));
       await site.submitButton.click();
 
-      await expect.soft(site.fieldError('File link'), 'link field shows a problem badge').toBeVisible();
+      await expect.soft(site.fieldError('File link'), 'link field shows a problem badge').toHaveText(site.labels.badges.link);
       await expect.soft(site.field('File link')).toHaveAttribute('aria-invalid', 'true');
       expect(calls, 'malformed link must not be sent').toBe(0);
     });
