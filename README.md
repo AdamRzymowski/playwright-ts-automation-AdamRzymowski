@@ -80,7 +80,10 @@ Allure report. Run them with `npm run test:a11y`.
 
 Covered: page structure and nav, every image loads, no JavaScript errors, gallery tabs and Painting
 sub-tabs, service cards and `#gallery-...` links, lightbox, form success / validation / errors, the
-EN/PL switch and translations, EN/PL content staying in sync, and the mobile menu and layout.
+EN/PL switch and translations, EN/PL content staying in sync, the mobile menu and layout, form
+character limits and the quantity range (`form-limits.spec.ts`), text colour contrast on every page state
+(`contrast.spec.ts`), and the file link format (`file-link.spec.ts`; the "malformed link" tests fail until
+the site checks links, see KNOWN-ISSUES.md).
 
 ## Setup
 
@@ -197,9 +200,15 @@ Desktop or Mobile by `fixtures/base.ts`. Each run starts
 with empty `allure-results/`; run history is kept in `allure-history/`, so trend charts grow with every
 report you generate.
 
+## Known issues
+
+[KNOWN-ISSUES.md](KNOWN-ISSUES.md) lists the bugs found in the Substandard Monsters site (character limits,
+unreadable dropdown after a failed check, link format, contrast and keyboard access), with steps to
+reproduce, expected vs actual, possible fixes and the tests that cover each one.
+
 ## Manual test cases
 
-`Manual tests/` holds a manual test case for every automated UI test (79 cases: Substandard Monsters and
+`Manual tests/` holds a manual test case for every automated UI test (127 cases: Substandard Monsters and
 Sauce Demo, desktop and mobile), for testing by hand or importing into a test management tool:
 
 | File | What it is |
@@ -213,7 +222,10 @@ size), **version** (the site version it was written for, plus the test case vers
 preconditions, numbered steps with expected results, and the automated test it mirrors.
 
 After editing the source or the UI tests, run `npm run manual:build`. It rebuilds the CSV and PDF and checks
-that every automated UI test still has exactly one manual case (and points out any that don't).
+that every automated UI test still has exactly one manual case (and points out any that don't). Each case
+points to its test by file and title (`auto: 'monsters/e2e/home.spec.ts › footer shows the site version'`;
+add the describe name when a title repeats), so it keeps working when test files change. New cases go at
+the end so existing case numbers (MT-001…) stay the same.
 
 ## BrowserStack: Safari and Chrome on a Mac
 

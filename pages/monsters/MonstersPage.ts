@@ -18,7 +18,18 @@ export const LABELS = {
     sending: 'Sending…',
     ok: "Thanks! Your request has been sent. I'll be in touch soon.",
     err: 'Sorry, something went wrong. Please try again or message me on Facebook.',
-    minWords: 'Please describe what you need in at least 5 words.',
+    // v1.6.0+: the site shows its own red badge in each field instead of browser pop-ups.
+    fix: 'Please check the fields marked in red.',
+    badges: {
+      name: 'Enter your name',
+      emailMissing: 'Enter your email',
+      emailInvalid: 'Check the email',
+      service: 'Choose a service',
+      quantity: 'Enter 1 to 10,000',
+      descriptionMissing: 'Describe what you need',
+      minWords: 'At least 5 words',
+      tooLong: (n: number) => `Max. ${n} characters`,
+    },
     languageField: 'English',
     subjectSuffix: '',
   },
@@ -34,7 +45,17 @@ export const LABELS = {
     sending: 'Wysyłanie…',
     ok: 'Dziękuję! Zapytanie zostało wysłane. Wkrótce się odezwę.',
     err: 'Przepraszam, coś poszło nie tak. Spróbuj ponownie lub napisz do mnie na Facebooku.',
-    minWords: 'Opisz, czego potrzebujesz, używając co najmniej 5 słów.',
+    fix: 'Sprawdź pola zaznaczone na czerwono.',
+    badges: {
+      name: 'Podaj imię',
+      emailMissing: 'Podaj e-mail',
+      emailInvalid: 'Sprawdź e-mail',
+      service: 'Wybierz usługę',
+      quantity: 'Od 1 do 10 000',
+      descriptionMissing: 'Opisz zamówienie',
+      minWords: 'Min. 5 słów',
+      tooLong: (n: number) => `Maks. ${n} znaków`,
+    },
     languageField: 'Polski',
     subjectSuffix: ' [PL]',
   },
@@ -46,7 +67,6 @@ export type RequestDetails = {
   email: string;
   service: string;
   quantity?: number;
-  material?: string;
   fileLink?: string;
   description: string;
 };
@@ -57,11 +77,20 @@ export const FORM_FIELDS = {
   email: 'form-email',
   Service: 'form-service',
   Quantity: 'form-quantity',
-  'Colour / material': 'form-colour-material',
   'File link': 'form-file-link',
   Description: 'form-description',
 } as const;
 export type FormField = keyof typeof FORM_FIELDS;
+
+/** Character limits (maxlength) of the request form, and the quantity range. */
+export const FORM_LIMITS = {
+  Name: 50,
+  email: 50,
+  'File link': 1000,
+  Description: 1000,
+} as const;
+export type LimitedField = keyof typeof FORM_LIMITS;
+export const QUANTITY_RANGE = { min: 1, max: 10_000 } as const;
 
 const NAV_TESTID: Record<Section, string> = {
   services: 'nav-services',
@@ -183,6 +212,24 @@ export class MonstersPage {
     return this.page.getByTestId(FORM_FIELDS[name]);
   }
 
+  /** The red badge the site shows inside a field when it has a problem (v1.6.0+). */
+  fieldError(name: FormField): Locator {
+    return this.page.getByTestId(`${FORM_FIELDS[name]}-error`);
+  }
+
+  /** The live "123 / 1000" counter under the description. */
+  get descriptionCounter(): Locator {
+    return this.page.getByTestId('form-description-count');
+  }
+
+  /** Puts text in a field without typing, the way autofill or a script would (bypasses maxlength). */
+  async setValueDirectly(name: FormField, value: string) {
+    await this.field(name).evaluate((el, v) => {
+      (el as HTMLInputElement).value = v;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, value);
+  }
+
   /** Browser validation message of a field ('' when valid). */
   async validationMessage(name: FormField): Promise<string> {
     return this.field(name).evaluate((el) => (el as HTMLInputElement).validationMessage);
@@ -197,7 +244,6 @@ export class MonstersPage {
     await this.field('email').fill(details.email);
     await this.field('Service').selectOption(details.service);
     if (details.quantity !== undefined) await this.field('Quantity').fill(String(details.quantity));
-    if (details.material) await this.field('Colour / material').fill(details.material);
     if (details.fileLink) await this.field('File link').fill(details.fileLink);
     await this.field('Description').fill(details.description);
   }

@@ -86,7 +86,6 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
         'form-email': /Email/,
         'form-service': /Service/,
         'form-quantity': /Quantity/,
-        'form-colour-material': /Colour \/ material/,
         'form-file-link': /Link to your file/,
         'form-description': /Describe what you need/,
       };

@@ -49,7 +49,6 @@ class FormSubmitApi {
       email: details.email,
       Service: details.service,
       Quantity: String(details.quantity ?? 1),
-      'Colour / material': details.material ?? '',
       'File link': details.fileLink ?? '',
       Description: details.description,
     };

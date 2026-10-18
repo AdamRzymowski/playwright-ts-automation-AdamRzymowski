@@ -154,7 +154,7 @@ test.describe('Mobile view', () => {
       expect.soft(email!.y).toBeGreaterThan(name!.y + name!.height);
       expect.soft(Math.abs(email!.x - name!.x)).toBeLessThan(2);
 
-      for (const field of ['Name', 'email', 'Service', 'Quantity', 'Colour / material', 'File link', 'Description'] as FormField[]) {
+      for (const field of ['Name', 'email', 'Service', 'Quantity', 'File link', 'Description'] as FormField[]) {
         const box = await site.field(field).boundingBox();
         expect.soft(box!.width, `${field} width`).toBeGreaterThan(form!.width * 0.7);
       }
@@ -195,7 +195,8 @@ test.describe('Mobile view', () => {
       await site.fillRequest(createPrintRequest({ description: 'too short' }));
       await site.submitButton.tap();
 
-      expect(await site.validationMessage('Description')).toBe(site.labels.minWords);
+      await expect(site.fieldError('Description')).toHaveText(site.labels.badges.minWords);
+      await expect(site.fieldError('Description')).toBeInViewport();
       await expect(site.field('Description')).toBeFocused();
     });
   });

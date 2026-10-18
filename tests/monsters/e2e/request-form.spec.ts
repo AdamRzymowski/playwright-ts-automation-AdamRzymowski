@@ -16,14 +16,14 @@ test.describe('Request form', () => {
   test('shows every field, the required note and an empty status', async ({ site }) => {
     await allure.severity(allure.Severity.CRITICAL);
 
-    for (const field of ['Name', 'email', 'Service', 'Quantity', 'Colour / material', 'File link', 'Description'] as FormField[]) {
+    for (const field of ['Name', 'email', 'Service', 'Quantity', 'File link', 'Description'] as FormField[]) {
       await expect.soft(site.field(field), field).toBeVisible();
       await expect.soft(site.field(field), field).toBeEditable();
     }
     for (const required of ['Name', 'email', 'Service', 'Description'] as FormField[]) {
       await expect.soft(site.field(required), `${required} is required`).toHaveAttribute('required', '');
     }
-    for (const optional of ['Quantity', 'Colour / material', 'File link'] as FormField[]) {
+    for (const optional of ['Quantity', 'File link'] as FormField[]) {
       await expect.soft(site.field(optional), `${optional} is optional`).not.toHaveAttribute('required');
     }
     await expect.soft(site.field('Quantity')).toHaveValue('1');
@@ -63,7 +63,6 @@ test.describe('Request form', () => {
       expect.soft(sent.email).toBe(request.email);
       expect.soft(sent.Service).toBe(request.service);
       expect.soft(sent.Quantity).toBe(String(request.quantity));
-      expect.soft(sent['Colour / material']).toBe(request.material);
       expect.soft(sent['File link']).toBe(request.fileLink);
       expect.soft(sent.Description).toBe(request.description);
       expect.soft(sent.Language).toBe('English');
@@ -90,7 +89,6 @@ test.describe('Request form', () => {
 
     await expect(site.formStatus).toHaveText(site.labels.ok);
     expect.soft(sent.Quantity).toBe('1');
-    expect.soft(sent['Colour / material']).toBe('');
     expect.soft(sent['File link']).toBe('');
   });
 
@@ -116,6 +114,9 @@ test.describe('Request form', () => {
       await allure.story('Validation');
     });
 
+    // v1.6.0+: the site checks the fields itself and shows a red badge in each problem field,
+    // plus "Please check the fields marked in red." under the button. Nothing is sent.
+
     test('required fields block sending', async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       let calls = 0;
@@ -126,11 +127,19 @@ test.describe('Request form', () => {
 
       await site.submitButton.click();
 
-      for (const name of ['Name', 'email', 'Service', 'Description'] as FormField[]) {
-        expect.soft(await site.isValid(name), `${name} should be invalid`).toBe(false);
+      const b = site.labels.badges;
+      const expected: [FormField, string][] = [
+        ['Name', b.name],
+        ['email', b.emailMissing],
+        ['Service', b.service],
+        ['Description', b.descriptionMissing],
+      ];
+      for (const [field, message] of expected) {
+        await expect.soft(site.fieldError(field), field).toHaveText(message);
+        await expect.soft(site.field(field), field).toHaveAttribute('aria-invalid', 'true');
       }
+      await expect(site.formStatus).toHaveText(site.labels.fix);
       expect(calls).toBe(0);
-      await expect(site.formStatus).toBeEmpty();
     });
 
     for (const missing of ['Name', 'email', 'Service', 'Description'] as FormField[]) {
@@ -146,7 +155,12 @@ test.describe('Request form', () => {
 
         await site.submitButton.click();
 
-        expect(await site.isValid(missing)).toBe(false);
+        await expect(site.fieldError(missing)).toBeVisible();
+        await expect(site.field(missing)).toHaveAttribute('aria-invalid', 'true');
+        // Only the missing field is flagged.
+        for (const other of (['Name', 'email', 'Service', 'Description'] as FormField[]).filter((f) => f !== missing)) {
+          await expect.soft(site.field(other), other).not.toHaveAttribute('aria-invalid', 'true');
+        }
         expect(calls).toBe(0);
       });
     }
@@ -161,8 +175,7 @@ test.describe('Request form', () => {
       await site.fillRequest(createPrintRequest({ email: 'not-an-email' }));
       await site.submitButton.click();
 
-      const typeMismatch = await site.field('email').evaluate((el) => (el as HTMLInputElement).validity.typeMismatch);
-      expect(typeMismatch).toBe(true);
+      await expect(site.fieldError('email')).toHaveText(site.labels.badges.emailInvalid);
       expect(calls).toBe(0);
     });
 
@@ -176,8 +189,19 @@ test.describe('Request form', () => {
       await site.fillRequest(createPrintRequest({ quantity: 0 }));
       await site.submitButton.click();
 
-      expect(await site.isValid('Quantity')).toBe(false);
+      await expect(site.fieldError('Quantity')).toHaveText(site.labels.badges.quantity);
       expect(calls).toBe(0);
+    });
+
+    test('a fixed field clears its badge while typing', async ({ page, site }) => {
+      await page.route(FORMSUBMIT, (route) => route.abort());
+      await site.submitButton.click();
+      await expect(site.fieldError('Name')).toBeVisible();
+
+      await site.field('Name').fill('Anna Nowak');
+
+      await expect(site.fieldError('Name')).toBeHidden();
+      await expect(site.field('Name')).toHaveAttribute('aria-invalid', 'false');
     });
 
     test('description needs at least 5 words', { tag: ['@smoke'] }, async ({ page, site }) => {
@@ -191,19 +215,20 @@ test.describe('Request form', () => {
 
       await test.step('4 words: blocked with a clear message', async () => {
         await site.submitButton.click();
-        expect(await site.isValid('Description')).toBe(false);
-        expect(await site.validationMessage('Description')).toBe(site.labels.minWords);
+        await expect(site.fieldError('Description')).toHaveText(site.labels.badges.minWords);
         expect(calls).toBe(0);
       });
 
       await test.step('extra spaces do not count as words', async () => {
         await site.field('Description').fill(`  ${words(2)}     ${words(2)}   `);
-        expect(await site.isValid('Description')).toBe(false);
+        await site.submitButton.click();
+        await expect(site.fieldError('Description')).toHaveText(site.labels.badges.minWords);
+        expect(calls).toBe(0);
       });
 
       await test.step('5 words: accepted and sent', async () => {
         await site.field('Description').fill(words(5));
-        expect(await site.isValid('Description')).toBe(true);
+        await expect(site.fieldError('Description')).toBeHidden();
         await site.submitButton.click();
         await expect(site.formStatus).toHaveText(site.labels.ok);
         expect(calls).toBe(1);

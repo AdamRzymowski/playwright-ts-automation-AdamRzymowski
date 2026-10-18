@@ -26,31 +26,47 @@ const list = spawnSync('npx playwright test --list --reporter=json --grep-invert
   maxBuffer: 64 * 1024 * 1024,
   env: { ...process.env, MONSTERS_ENV: 'live' },
 });
-const uiTests = new Map(); // "file:line" -> number of distinct UI tests there (loops share a line)
+// Each automated UI test as "file › describe › ... › title" (unique, and stable when lines move).
+const uiTests = [];
 try {
   const report = JSON.parse(list.stdout);
   const seen = new Set();
+  const norm = (p) => p.split('\\').join('/');
   (function walk(suite, titles) {
     for (const child of suite.suites ?? []) walk(child, [...titles, child.title]);
     for (const spec of suite.specs ?? []) {
-      const key = `${spec.file.replace(/\\/g, '/')}:${spec.line}`;
-      const id = `${key}|${titles.join('>')}|${spec.title}`;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      uiTests.set(key, (uiTests.get(key) ?? 0) + 1);
+      // The first title is the spec file itself; skip it, the file is already at the front.
+      const key = [norm(spec.file), ...titles.slice(1), spec.title].join(' › ');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      uiTests.push(key);
     }
   })({ suites: report.suites }, []);
 } catch {
   console.warn('Could not list the automated tests; skipping the coverage check.');
 }
-if (uiTests.size) {
-  const byRef = new Map();
-  for (const c of cases) byRef.set(c.auto, (byRef.get(c.auto) ?? 0) + 1);
+/**
+ * A case's `auto` is "file › title" or "file › describe › ... › title". It matches a test whose key
+ * starts with the file and ends with the rest, so short refs work when the title is unique in the file.
+ */
+const matches = (auto, key) => {
+  const [file, ...rest] = auto.split(' › ');
+  return key.startsWith(`${file} › `) && key.endsWith(` › ${rest.join(' › ')}`);
+};
+if (uiTests.length) {
   const problems = [];
-  for (const [ref, n] of uiTests) if ((byRef.get(ref) ?? 0) !== n) problems.push(`${ref}: ${n} automated test(s), ${byRef.get(ref) ?? 0} manual case(s)`);
-  for (const ref of byRef.keys()) if (!uiTests.has(ref)) problems.push(`${ref}: manual case points to no automated UI test`);
-  const total = [...uiTests.values()].reduce((a, b) => a + b, 0);
-  console.log(`Coverage: ${total} automated UI tests, ${cases.length} manual cases${problems.length ? '' : ' - all matched'}.`);
+  const hits = new Map(uiTests.map((k) => [k, []]));
+  for (const c of cases) {
+    const found = uiTests.filter((k) => matches(c.auto, k));
+    if (found.length === 0) problems.push(`${c.id} "${c.title}": points to no automated UI test (${c.auto})`);
+    else if (found.length > 1) problems.push(`${c.id} "${c.title}": matches ${found.length} tests, add the describe name (${c.auto})`);
+    else hits.get(found[0]).push(c.id);
+  }
+  for (const [key, ids] of hits) {
+    if (ids.length === 0) problems.push(`no manual case for: ${key}`);
+    if (ids.length > 1) problems.push(`${ids.join(', ')} all point to: ${key}`);
+  }
+  console.log(`Coverage: ${uiTests.length} automated UI tests, ${cases.length} manual cases${problems.length ? '' : ' - all matched'}.`);
   if (problems.length) console.warn(`Coverage gaps:\n  ${problems.join('\n  ')}`);
 }
 
@@ -85,12 +101,13 @@ writeFileSync(join(DIR, 'manual-test-cases.csv'), '﻿' + csv + '\r\n', 'utf8');
 // ---- PDF ---------------------------------------------------------------------------------------
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 const prioClass = (p) => p.toLowerCase();
-const groups = [];
+const groupMap = new Map();
 for (const c of cases) {
   const g = `${c.siteName} · ${c.platformShort === 'Tablet' ? 'Mobile' : c.platformShort}`;
-  if (groups.at(-1)?.name !== g) groups.push({ name: g, cases: [] });
-  groups.at(-1).cases.push(c);
+  if (!groupMap.has(g)) groupMap.set(g, { name: g, cases: [] });
+  groupMap.get(g).cases.push(c);
 }
+const groups = [...groupMap.values()];
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   body { font: 10.5px/1.45 "Segoe UI", Arial, sans-serif; color: #1d2433; margin: 0; }
@@ -109,7 +126,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   .break { page-break-before: always; }
 </style></head><body>
 <h1>Manual test cases</h1>
-<div class="muted">Playwright TS Automation · ${cases.length} cases, one for each automated UI test · case version ${CASE_VERSION} · written ${WRITTEN}</div>
+<div class="muted">Playwright TS Automation · ${cases.length} cases, one for each automated UI test (desktop and phone view) · case version ${CASE_VERSION} · written ${WRITTEN}</div>
 <table style="margin-top:10px"><tr><th>Site</th><th>Address</th><th>App version</th></tr>
 ${Object.values(SITES).map((s) => `<tr><td>${esc(s.name)}</td><td>${esc(s.url)}</td><td>${esc(s.appVersion)}</td></tr>`).join('')}</table>
 <table style="margin-top:8px"><tr><th>Platform</th><th>Meaning</th></tr>

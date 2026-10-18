@@ -76,7 +76,8 @@ test.describe('Languages (EN / PL)', () => {
     await sitePl.fillRequest(createPrintRequest({ service: MONSTER_SERVICES.pl[0], description: words(3) }));
     await sitePl.submitButton.click();
 
-    expect(await sitePl.validationMessage('Description')).toBe(sitePl.labels.minWords);
+    await expect(sitePl.fieldError('Description')).toHaveText(sitePl.labels.badges.minWords);
+    await expect(sitePl.formStatus).toHaveText(sitePl.labels.fix);
   });
 
   test('EN and PL pages have the same photos and services', async ({ page, site, sitePl }) => {

@@ -38,7 +38,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
         expect.soft(contract.hidden._subject).toBe(EXPECTED_HIDDEN[lang]._subject);
         expect.soft(contract.hidden.Language).toBe(EXPECTED_HIDDEN[lang].Language);
         expect.soft(contract.fieldNames).toEqual(
-          expect.arrayContaining(['Name', 'email', 'Service', 'Quantity', 'Colour / material', 'File link', 'Description']),
+          expect.arrayContaining(['Name', 'email', 'Service', 'Quantity', 'File link', 'Description']),
         );
       });
     }
@@ -101,7 +101,6 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
         email: TEST_EMAIL,
         service: MONSTER_SERVICES.en[4], // "Not sure"
         quantity: 1,
-        material: 'automated test - no print needed',
         fileLink: '',
         description: `[AUTOMATED API TEST - please ignore] Backend check of the request form, ${new Date().toISOString()}.`,
       };

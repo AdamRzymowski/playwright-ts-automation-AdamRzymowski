@@ -43,7 +43,6 @@ export function createPrintRequest(overrides: Partial<RequestDetails> = {}): Req
     email: TEST_EMAIL,
     service: faker.helpers.arrayElement(MONSTER_SERVICES.en),
     quantity: faker.number.int({ min: 1, max: 20 }),
-    material: faker.helpers.arrayElement(['black PLA', 'grey resin', 'red PETG', 'not sure']),
     fileLink: faker.internet.url(),
     // Comfortably above the form's 5-word minimum.
     description: faker.lorem.sentences(2),

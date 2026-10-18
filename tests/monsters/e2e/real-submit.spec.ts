@@ -27,7 +27,6 @@ test.describe('Real form submission', () => {
       email: TEST_EMAIL,
       service: 'Not sure',
       quantity: 1,
-      material: 'automated test - no print needed',
       fileLink: '',
       description: `[AUTOMATED TEST - please ignore] Playwright end-to-end check of the request form, run ${runId}.`,
     };
