@@ -10,6 +10,10 @@ happen, and the automated tests that cover it (they fail while the bug is open).
 | [KI-003](#ki-003-link-field-accepts-text-that-is-not-a-web-address) | Link field accepts text that is not a web address | Medium | Open | v1.6.0 |
 | [KI-004](#ki-004-facebook-button-text-contrast-too-low) | Facebook button text contrast too low (found by automated tests) | Low | Open | v1.4.3 |
 | [KI-005](#ki-005-gallery-photos-cannot-be-opened-with-the-keyboard) | Gallery photos cannot be opened with the keyboard (found by automated tests) | Medium | Open | v1.4.3 |
+| [KI-006](#ki-006-owners-email-address-is-public-in-the-form-and-captcha-is-off) | Owner's email address is public in the form, and captcha is off | Medium | Open | v1.3.0 |
+| [KI-007](#ki-007-no-dev-or-pull-request-preview-on-netlify) | No dev or pull request preview on Netlify | Low | Open | 2026-10-17 |
+| [KI-008](#ki-008-old-netlifyapp-address-returns-404) | Old substandard-monsters.netlify.app address returns 404 | Low | Open | 2026-10-18 |
+| [KI-009](#ki-009-https-certificate-not-valid-when-the-new-domain-went-live) | HTTPS certificate not valid when the new domain went live | High | Resolved 2026-10-18 | 2026-10-18 |
 
 Severity: **High** = blocks or confuses visitors · **Medium** = wrong behaviour with a workaround ·
 **Low** = cosmetic or affects few visitors.
@@ -136,6 +140,81 @@ lightbox on Enter/Space too, or wrap each photo in a `<button>`.
 
 **Automated tests:** `tests/monsters/e2e/accessibility.spec.ts`, "gallery photos can be opened with the
 keyboard".
+
+---
+
+## KI-006: Owner's email address is public in the form, and captcha is off
+
+- **Severity:** Medium (spam and privacy)
+- **Status:** Open
+- **Area:** Request a print form
+
+The form's action is `https://formsubmit.co/ajax/adamrzymowski@gmail.com`, so the owner's email address is in
+the page source for anyone, including spam bots, to read. With `_captcha` set to `false`, the only
+protection against automated submissions is the hidden `_honey` field, which bots that post directly to
+FormSubmit simply leave empty.
+
+**Steps to reproduce:** open the site, view the page source (Ctrl+U), search for `formsubmit`.
+
+**Expected:** no personal email address in the page; scripted submissions are hard to send.
+**Actual:** the address is public; anyone can post requests directly (see KI-001).
+
+**Possible fix:** replace the email in the action with the random alias FormSubmit gives after
+activation (described in the site's SETUP-GUIDE.md), and consider a server-side check (Netlify Function)
+or a captcha that works with AJAX submissions.
+
+**Automated tests:** `tests/monsters/api/formsubmit.spec.ts` checks the form's FormSubmit address; the
+contract test will need its expectation updated when the alias is used.
+
+---
+
+## KI-007: No dev or pull request preview on Netlify
+
+- **Severity:** Low (affects testing before publishing, not visitors)
+- **Status:** Open
+- **Area:** Hosting (Netlify)
+
+`https://dev--substandard-monsters.netlify.app` and `https://deploy-preview-<number>--substandard-monsters.netlify.app`
+return 404, so changes can't be tested on a deployed copy before they go live. `npm run test:dev` and
+`npm run test:preview -- <number>` stop with "not reachable".
+
+**Possible fix:** in Netlify, check the site is linked to the GitHub repository (Site configuration > Build &
+deploy), turn on Branch deploys for `dev` and Deploy Previews for pull requests. If the Netlify site name
+is no longer `substandard-monsters`, set `MONSTERS_NETLIFY_SITE` in `.env` (see KI-008).
+
+---
+
+## KI-008: Old netlify.app address returns 404
+
+- **Severity:** Low
+- **Status:** Open (check whether this is intended)
+- **Area:** Hosting (Netlify)
+
+Since the move to `https://substandard-monsters.com`, the old address `https://substandard-monsters.netlify.app`
+returns Netlify's "Not Found" page instead of redirecting to the new domain. Links shared earlier (e.g. on
+Facebook) and old bookmarks are broken. It suggests the Netlify site was renamed, which also changes the
+dev and preview addresses (KI-007).
+
+**Expected:** the old address redirects to `https://substandard-monsters.com`.
+**Possible fix:** keep the old Netlify subdomain on the same site (Netlify redirects a site's
+`*.netlify.app` address to its primary custom domain automatically), or set up a redirect from it.
+
+---
+
+## KI-009: HTTPS certificate not valid when the new domain went live
+
+- **Severity:** High while it lasted (browsers showed a security warning; visitors could not reach the site
+  over HTTPS)
+- **Status:** Resolved 2026-10-18
+- **Area:** Hosting (Netlify), custom domain
+
+Right after `substandard-monsters.com` was connected, `https://` failed with "certificate name does not
+match" (ERR_TLS_CERT_ALTNAME_INVALID) while `http://` worked. Netlify issued the certificate later the
+same day; HTTPS now works and `http://` and `www.` redirect to `https://substandard-monsters.com`.
+
+**Lesson:** after connecting a domain, wait for Netlify > Domain management > HTTPS to show the
+certificate as active before announcing the new address. The test runner now explains this case when a
+site's certificate is invalid.
 
 ---
 
