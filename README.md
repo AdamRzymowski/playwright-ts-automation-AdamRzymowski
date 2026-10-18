@@ -16,13 +16,18 @@ The same tests can run against three copies of the site (addresses in `sites.ts`
 
 | Environment | Variable (default address) | What it is |
 | --- | --- | --- |
-| `live` | `MONSTERS_LIVE_URL` (https://substandard-monsters.netlify.app) | The published site (`main` branch) |
+| `live` | `MONSTERS_LIVE_URL` (https://substandard-monsters.com) | The published site (`main` branch) |
 | `dev` | `MONSTERS_DEV_URL` (https://dev--substandard-monsters.netlify.app) | Netlify's preview of the `dev` branch, to test changes **before** publishing |
 | `local` | `MONSTERS_LOCAL_URL` (http://localhost:4173) | The `../Substandard-Monsters` folder on this PC (whatever branch is checked out); Playwright starts a small web server for it |
 
 `npm run tests` asks which one to use (or `--env=live|dev|local`). Plain Playwright runs use
 `MONSTERS_ENV` (default `local`): `npm run test:monsters:live`, `test:monsters:dev`, `test:monsters:local`.
 `MONSTERS_URL` overrides everything with any address.
+
+The live site is on its own domain, but Netlify still names the dev and pull request previews after the
+Netlify *site name* (`dev--<site name>.netlify.app`, `deploy-preview-12--<site name>.netlify.app`). That
+name defaults to `substandard-monsters`; if it's different (Netlify: Site configuration > Site details >
+Site name), set `MONSTERS_NETLIFY_SITE` in `.env`.
 The runner checks that a deployed copy answers before testing it.
 
 **Before / after publishing:**
@@ -47,7 +52,7 @@ The request form is never really sent: every call to FormSubmit is blocked or mo
 | Command | What it does |
 | --- | --- |
 | `npm run test:monsters` | Monsters tests against the local `../Substandard-Monsters` folder |
-| `npm run test:monsters:live` | Monsters tests against https://substandard-monsters.netlify.app |
+| `npm run test:monsters:live` | Monsters tests against https://substandard-monsters.com |
 | `npm run test:monsters:submit` | **Sends one real request email** through the live form (Chromium only), to check the whole chain works end to end |
 
 The real-submission test (`tests/monsters/e2e/real-submit.spec.ts`) is skipped unless `SUBMIT_REAL_FORM=1`

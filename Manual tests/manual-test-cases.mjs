@@ -6,7 +6,7 @@ export const CASE_VERSION = '1.0';
 export const WRITTEN = '2026-10-18';
 
 export const SITES = {
-  monsters: { name: 'Substandard Monsters', url: 'https://substandard-monsters.netlify.app', appVersion: '1.4.3 (footer "v1.4.3")' },
+  monsters: { name: 'Substandard Monsters', url: 'https://substandard-monsters.com', appVersion: '1.4.3 (footer "v1.4.3")' },
   saucedemo: { name: 'Sauce Demo', url: 'https://www.saucedemo.com', appVersion: 'Public demo site (not versioned)' },
 };
 
@@ -17,8 +17,8 @@ export const PLATFORMS = {
   tablet: 'Tablet: 768 x 1024 (DevTools device mode, responsive), Chrome or Edge',
 };
 
-const M_OPEN = 'Open https://substandard-monsters.netlify.app in a fresh browser window.';
-const M_OPEN_PL = 'Open https://substandard-monsters.netlify.app/pl in a fresh browser window.';
+const M_OPEN = 'Open https://substandard-monsters.com in a fresh browser window.';
+const M_OPEN_PL = 'Open https://substandard-monsters.com/pl in a fresh browser window.';
 const NO_EMAIL =
   'Real submissions email the site owner. Unless the case says otherwise, block the form service first: ' +
   'DevTools (F12) > Network > right-click any request > Block request URL, enter "formsubmit.co" ' +
@@ -163,7 +163,7 @@ export const CASES = [
     area: 'Gallery',
     pre: 'Fresh browser window.',
     steps: [
-      ['Open https://substandard-monsters.netlify.app/#gallery-fdm.', 'Page opens scrolled to the Gallery.'],
+      ['Open https://substandard-monsters.com/#gallery-fdm.', 'Page opens scrolled to the Gallery.'],
       ['Look at the tabs.', '"FDM printing" is active and FDM photos are shown.'],
     ],
     auto: 'monsters/e2e/gallery.spec.ts:74',
@@ -526,7 +526,7 @@ export const CASES = [
     {
       title: 'No sideways scrolling (Polish page)',
       area: 'Mobile > Layout',
-      pre: 'Open https://substandard-monsters.netlify.app/pl on the phone.',
+      pre: 'Open https://substandard-monsters.com/pl on the phone.',
       steps: [['Scroll the whole page and try swiping left/right.', 'The page never scrolls sideways.']],
       auto: 'monsters/mobile/mobile.spec.ts:79',
     },
@@ -620,7 +620,7 @@ export const CASES = [
       ],
       auto: 'monsters/mobile/mobile.spec.ts:224',
     },
-  ].map((c) => m({ platform: 'mobile', pre: 'Open https://substandard-monsters.netlify.app on the phone.', ...c })),
+  ].map((c) => m({ platform: 'mobile', pre: 'Open https://substandard-monsters.com on the phone.', ...c })),
 
   // ---------------------------------------------------------------- Sauce Demo: desktop
   s({

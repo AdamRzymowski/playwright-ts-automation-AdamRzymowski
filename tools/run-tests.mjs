@@ -81,18 +81,19 @@ const playwrightSuites = suites.filter((s) => s !== 'perf');
 
 // 2. Which copy of the Substandard Monsters site (same names and defaults as sites.ts)
 const ENVS = {
-  live: { label: 'Live', url: process.env.MONSTERS_LIVE_URL ?? 'https://substandard-monsters.netlify.app', detail: 'the published site' },
-  dev: { label: 'Dev', url: process.env.MONSTERS_DEV_URL ?? 'https://dev--substandard-monsters.netlify.app', detail: 'Netlify preview of the dev branch, before publishing' },
+  live: { label: 'Live', url: process.env.MONSTERS_LIVE_URL ?? 'https://substandard-monsters.com', detail: 'the published site' },
+  dev: { label: 'Dev', url: process.env.MONSTERS_DEV_URL ?? `https://dev--${process.env.MONSTERS_NETLIFY_SITE ?? 'substandard-monsters'}.netlify.app`, detail: 'Netlify preview of the dev branch, before publishing' },
   local: { label: 'Local', url: process.env.MONSTERS_LOCAL_URL ?? 'http://localhost:4173', detail: 'the ../Substandard-Monsters folder on this PC' },
   preview: { label: 'Preview', url: '', detail: "Netlify's temporary deploy preview of a pull request" },
 };
-/** "12" -> https://deploy-preview-12--substandard-monsters.netlify.app; a full address is used as is. */
+/** Netlify's own name for the site (its *.netlify.app subdomain), used for dev and pull request previews. */
+const NETLIFY_SITE = process.env.MONSTERS_NETLIFY_SITE ?? 'substandard-monsters';
+/** "12" -> https://deploy-preview-12--<netlify site>.netlify.app; a full address is used as is. */
 function previewUrl(value) {
   const v = String(value).trim();
   if (/^https?:\/\//.test(v)) return v;
   if (!/^\d+$/.test(v)) return null;
-  const liveHost = new URL(ENVS.live.url).host; // substandard-monsters.netlify.app
-  return `https://deploy-preview-${v}--${liveHost}`;
+  return `https://deploy-preview-${v}--${NETLIFY_SITE}.netlify.app`;
 }
 
 let target = String(args.preview ? 'preview' : (args.env ?? process.env.MONSTERS_ENV ?? (interactive ? '' : 'live'))).toLowerCase();
@@ -122,9 +123,21 @@ const siteUrl = (process.env.MONSTERS_URL ?? ENVS[target].url).replace(/\/$/, ''
 
 // Deployed copies must answer before we spend minutes testing them.
 if (target !== 'local') {
-  const status = await fetch(siteUrl, { method: 'HEAD' }).then((r) => r.status).catch(() => 0);
+  let reason = '';
+  const status = await fetch(siteUrl, { method: 'HEAD' })
+    .then((r) => r.status)
+    .catch((e) => {
+      reason = e.cause?.code ?? e.cause?.message ?? e.message;
+      return 0;
+    });
   if (status !== 200) {
-    console.error(`\n${ENVS[target].label} site ${siteUrl} is not reachable (HTTP ${status || 'no answer'}).`);
+    console.error(`\n${ENVS[target].label} site ${siteUrl} is not reachable (${status ? `HTTP ${status}` : reason || 'no answer'}).`);
+    if (/CERT|SSL|TLS|ALTNAME|SELF_SIGNED/i.test(reason)) {
+      console.error(
+        "Its HTTPS certificate isn't valid for this address yet. For a new custom domain Netlify issues it\n" +
+          'automatically once DNS is verified (Domain management > HTTPS); this can take up to a day.',
+      );
+    }
     if (target === 'preview') {
       console.error(
         'Deploy previews exist only for open pull requests on a Netlify site linked to GitHub.\n' +

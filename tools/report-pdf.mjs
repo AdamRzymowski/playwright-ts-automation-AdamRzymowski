@@ -115,7 +115,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
 <h1>Test report</h1>
 <div class="muted">Playwright TS Automation · ${new Date(isFinite(started) ? started : Date.now()).toLocaleString('en-GB')}
 ${isFinite(started) ? ` · duration ${ms(stopped - started)}` : ''}<br>
-Sites: Substandard Monsters${process.env.MONSTERS_ENV ? ` <b>${esc(process.env.MONSTERS_ENV)}</b>` : ''} (${esc(process.env.MONSTERS_URL ?? 'https://substandard-monsters.netlify.app')}), saucedemo.com</div>
+Sites: Substandard Monsters${process.env.MONSTERS_ENV ? ` <b>${esc(process.env.MONSTERS_ENV)}</b>` : ''} (${esc(process.env.MONSTERS_URL ?? 'https://substandard-monsters.com')}), saucedemo.com</div>
 
 ${
   total

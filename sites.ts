@@ -4,7 +4,7 @@ export const SAUCEDEMO_URL = process.env.BASE_URL ?? 'https://www.saucedemo.com'
 
 /**
  * Substandard Monsters environments:
- * - live:  the published site (main branch on Netlify)
+ * - live:  the published site, https://substandard-monsters.com (main branch on Netlify)
  * - dev:   Netlify's branch deploy of the dev branch, to test changes before publishing
  * - local: the ../Substandard-Monsters folder on this PC, served by tools/serve-static.mjs
  * Pick one with MONSTERS_ENV=live|dev|local (default: local). MONSTERS_URL still overrides everything.
@@ -15,8 +15,9 @@ export const MONSTERS_DIR = process.env.MONSTERS_DIR ?? '../Substandard-Monsters
 export const MONSTERS_PORT = 4173;
 
 export const MONSTERS_URLS: Record<MonstersEnv, string> = {
-  live: process.env.MONSTERS_LIVE_URL ?? 'https://substandard-monsters.netlify.app',
-  dev: process.env.MONSTERS_DEV_URL ?? 'https://dev--substandard-monsters.netlify.app',
+  live: process.env.MONSTERS_LIVE_URL ?? 'https://substandard-monsters.com',
+  // Netlify branch deploy: dev--<Netlify site name>.netlify.app
+  dev: process.env.MONSTERS_DEV_URL ?? `https://dev--${process.env.MONSTERS_NETLIFY_SITE ?? 'substandard-monsters'}.netlify.app`,
   local: process.env.MONSTERS_LOCAL_URL ?? `http://localhost:${MONSTERS_PORT}`,
 };
 

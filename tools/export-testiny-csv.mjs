@@ -55,7 +55,7 @@ for (const file of readdirSync(resultsDir).filter((f) => f.endsWith('-result.jso
   const folder = [platform, label(r, 'epic'), label(r, 'feature'), label(r, 'story')].filter(Boolean).join(' > ');
   const severity = label(r, 'severity') ?? 'normal';
   const site = (label(r, 'epic') ?? '').startsWith('Substandard')
-    ? 'https://substandard-monsters.netlify.app'
+    ? 'https://substandard-monsters.com'
     : 'https://www.saucedemo.com';
 
   cases.set(key, {

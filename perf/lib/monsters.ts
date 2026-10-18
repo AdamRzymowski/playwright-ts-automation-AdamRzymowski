@@ -3,7 +3,7 @@ import { check, group } from 'k6';
 import { Trend } from 'k6/metrics';
 
 /** Site under test; override with: k6 run -e MONSTERS_URL=https://... perf/smoke.ts */
-export const BASE_URL = (__ENV.MONSTERS_URL || 'https://substandard-monsters.netlify.app').replace(/\/$/, '');
+export const BASE_URL = (__ENV.MONSTERS_URL || 'https://substandard-monsters.com').replace(/\/$/, '');
 
 /** Time to first byte of the HTML pages only (assets excluded), to watch server/CDN speed. */
 export const pageTtfb = new Trend('page_ttfb', true);
