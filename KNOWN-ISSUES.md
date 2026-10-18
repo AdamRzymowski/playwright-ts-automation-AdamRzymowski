@@ -14,8 +14,10 @@ happen, and the automated tests that cover it (they fail while the bug is open).
 | [KI-007](#ki-007-no-dev-or-pull-request-preview-on-netlify) | No dev or pull request preview on Netlify | Low | Open | 2026-10-17 |
 | [KI-008](#ki-008-old-netlifyapp-address-returns-404) | Old substandard-monsters.netlify.app address returns 404 | Low | Open | 2026-10-18 |
 | [KI-009](#ki-009-https-certificate-not-valid-when-the-new-domain-went-live) | HTTPS certificate not valid when the new domain went live | High | Resolved 2026-10-18 | 2026-10-18 |
+| [KI-010](#ki-010-request-form-rejected-on-the-new-domain-formsubmit-needs-activation) | Request form rejected on the new domain: FormSubmit needs activation | **Critical** | Open | v1.6.0 |
+| [KI-011](#ki-011-red-error-badges-are-hard-to-read) | Red error badges are hard to read (white on light red, 2.77:1) | Medium | Open | v1.6.0 |
 
-Severity: **High** = blocks or confuses visitors · **Medium** = wrong behaviour with a workaround ·
+Severity: **Critical** = a main feature doesn't work for anyone · **High** = blocks or confuses visitors · **Medium** = wrong behaviour with a workaround ·
 **Low** = cosmetic or affects few visitors.
 
 ---
@@ -218,7 +220,60 @@ site's certificate is invalid.
 
 ---
 
+## KI-010: Request form rejected on the new domain: FormSubmit needs activation
+
+- **Severity:** Critical (no print requests reach the owner)
+- **Status:** Open
+- **Found:** 2026-10-18, automated run against https://substandard-monsters.com (v1.6.0)
+- **Area:** Request a print form / FormSubmit
+
+**Steps to reproduce**
+1. Open https://substandard-monsters.com, go to "Request a print".
+2. Fill in the form correctly and click "Send request".
+
+**Expected:** "Thanks! Your request has been sent. I'll be in touch soon." and an email to the owner.
+**Actual:** red message "Sorry, something went wrong. Please try again or message me on Facebook. (This form
+needs Activation. We've sent you an email containing an 'Activate Form' link. Just click it and your form
+will be actived!)". FormSubmit's reply is `{"success":"false","message":"This form needs Activation. …"}`.
+
+**Cause:** FormSubmit activates a form per website address. The form was activated while the site lived on
+`substandard-monsters.netlify.app`; since the move to `substandard-monsters.com` it is a new, unactivated
+form for FormSubmit, so every submission is rejected until it is activated.
+
+**Fix:** open the "Activate Form" email FormSubmit sent to adamrzymowski@gmail.com (check spam) and click
+the link, then send one test request. Consider switching the action to the FormSubmit alias at the same time
+(KI-006).
+
+**Automated tests:** `tests/monsters/e2e/real-submit.spec.ts` and the "Successful submission" tests in
+`tests/monsters/api/formsubmit.spec.ts` (opt-in, `SUBMIT_REAL_FORM=1`); both failed with this message.
+The everyday form tests fake FormSubmit's reply, so they could not catch it: run the opt-in tests after any
+domain or hosting change.
+
+---
+
+## KI-011: Red error badges are hard to read
+
+- **Severity:** Medium
+- **Status:** Open
+- **Found:** v1.6.0
+- **Area:** Request a print form, field error badges ("Enter your name", "Max. 50 characters", …)
+
+The badges are white bold 12 px text on `#ff6b6b` (the `--error` colour): contrast **2.77:1**, below the
+4.5:1 WCAG 2.2 AA (1.4.3) needs for normal-size text. Visitors with low vision, or on a phone in sunlight,
+may not be able to read why their request was not sent.
+
+**Steps to reproduce:** open "Request a print", click "Send request" on the empty form, look at the badges
+(or check them in DevTools: Elements > the badge > contrast ratio next to `color`).
+
+**Possible fix:** dark text on the light red (e.g. `color: #2b0000` gives about 8:1), or a darker red
+background with white text (e.g. `#c62828` gives about 5.6:1).
+
+**Automated tests:** `tests/monsters/e2e/contrast.spec.ts`, "form error badges and the red message are
+readable" (fails on every browser).
+
+---
+
 ## Adding an issue
 
-Copy a section above, give it the next ID (KI-006, …), add it to the table, and link the tests that cover
+Copy a section above, give it the next ID (KI-012, …), add it to the table, and link the tests that cover
 it. When an issue is fixed, set its status to **Fixed in vX.Y.Z** and keep it in the list for history.

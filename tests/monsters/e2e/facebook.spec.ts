@@ -43,7 +43,8 @@ test.describe('Facebook links', () => {
             await popup.waitForURL(/facebook\.com/);
             expect.soft(decodeURIComponent(popup.url())).toContain(FACEBOOK_PAGE);
           }
-          await allure.attachment(`facebook-${lang}-${i + 1}.png`, await popup.screenshot(), 'image/png');
+          const shot = await popup.screenshot().catch(() => null);
+          if (shot) await allure.attachment(`facebook-${lang}-${i + 1}.png`, shot, 'image/png');
 
           // The shop stays open in the original tab.
           expect.soft(page.url()).toBe(pageUrl);

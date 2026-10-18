@@ -1,7 +1,7 @@
 import * as allure from 'allure-js-commons';
 import { test, expect, FORMSUBMIT } from '../../../fixtures/monsters';
 import type { RequestDetails } from '../../../pages/monsters/MonstersPage';
-import { TEST_EMAIL } from '../../utils/testData';
+import { REAL_SUBMIT_EMAIL } from '../../utils/testData';
 import { FORMSUBMIT_SUCCESS } from '../../../fixtures/formsubmit-api';
 
 /**
@@ -24,7 +24,7 @@ test.describe('Real form submission', () => {
     const runId = new Date().toISOString();
     const request: RequestDetails = {
       name: 'Playwright Test Bot',
-      email: TEST_EMAIL,
+      email: REAL_SUBMIT_EMAIL,
       service: 'Not sure',
       quantity: 1,
       fileLink: '',
@@ -51,7 +51,7 @@ test.describe('Real form submission', () => {
       expect.soft(sent.headers()['accept']).toBe('application/json');
       const payload = sent.postDataBuffer()?.toString('utf8') ?? '';
       expect.soft(payload).toContain(site.expectedSubject(request));
-      expect.soft(payload).toContain(TEST_EMAIL);
+      expect.soft(payload).toContain(REAL_SUBMIT_EMAIL);
       expect.soft(payload).toContain('English');
     });
 

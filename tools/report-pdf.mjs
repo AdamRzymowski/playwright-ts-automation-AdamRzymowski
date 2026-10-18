@@ -105,7 +105,10 @@ function screenshotOf(r) {
   };
   const src = find(r);
   if (!src || !existsSync(join(RESULTS, src))) return null;
-  return `data:image/png;base64,${readFileSync(join(RESULTS, src)).toString('base64')}`;
+  const file = join(RESULTS, src);
+  // Full-page phone screenshots can be very tall; embedding many of them crashes the PDF renderer.
+  if (statSync(file).size > 600 * 1024) return 'too-large';
+  return `data:image/png;base64,${readFileSync(file).toString('base64')}`;
 }
 /** File:line of the test from its stack trace (first frame inside tests/). */
 function locationOf(r) {
@@ -285,7 +288,9 @@ ${
 <tr><td>Failed on</td><td>${esc(bad.map(([p]) => projLabel(p)).join(', '))}; passed on ${esc(Object.entries(t.runs).filter(([, r]) => r.status === 'passed').map(([p]) => projLabel(p)).join(', ') || 'none')}</td></tr>
 ${step ? `<tr><td>Failing step</td><td>${esc(step)}</td></tr>` : ''}
 </table>
-<pre>${esc(plain(first.r.statusDetails?.message).split('\n').slice(0, 16).join('\n'))}</pre>${shot ? `<img src="${shot}">` : ''}</div>`;
+<pre>${esc(plain(first.r.statusDetails?.message).split('\n').slice(0, 16).join('\n'))}</pre>${
+            shot === 'too-large' ? '<div class="muted">Screenshot too large for the PDF: see the Allure report.</div>' : shot ? `<img src="${shot}">` : ''
+          }</div>`;
         })
         .join('')
     : '<p class="ok">No failures.</p>'

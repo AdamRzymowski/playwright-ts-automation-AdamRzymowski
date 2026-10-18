@@ -162,15 +162,21 @@ export class MonstersPage {
 
   async goto(hash = '') {
     await this.page.goto(this.labels.path + hash);
-    // script.js fills in the footer version first; once it's there, the click handlers are attached too.
-    await this.page.waitForFunction(() => !!document.getElementById('site-version')?.textContent);
+    await this.waitForScript();
   }
 
   /** At phone width the menu is behind the ☰ button; open it if so (no-op on desktop). */
   async openMenuIfCollapsed() {
+    await this.waitForScript();
     if ((await this.menuButton.isVisible()) && (await this.menuButton.getAttribute('aria-expanded')) !== 'true') {
       await this.menuButton.click();
+      await this.page.waitForFunction(() => document.querySelector('[data-testid="nav-toggle"]')?.getAttribute('aria-expanded') === 'true');
     }
+  }
+
+  /** script.js fills in the footer version first; once it's there, the click handlers are attached too. */
+  async waitForScript() {
+    await this.page.waitForFunction(() => !!document.getElementById('site-version')?.textContent);
   }
 
   /** Clicks a header link the way a user would on any screen size. */

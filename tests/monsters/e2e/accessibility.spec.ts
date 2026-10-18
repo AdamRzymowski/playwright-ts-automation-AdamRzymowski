@@ -111,7 +111,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       await page.keyboard.press('Tab');
       await expect(site.field('Quantity')).toBeFocused();
       await page.keyboard.press('Tab');
-      await page.keyboard.press('Tab');
+      await expect(site.field('File link')).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(site.field('Description')).toBeFocused();
       await page.keyboard.type(request.description);

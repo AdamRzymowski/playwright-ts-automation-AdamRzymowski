@@ -1,7 +1,7 @@
 import * as allure from 'allure-js-commons';
 import { test, expect, FORMSUBMIT_SUCCESS, REAL_SUBMISSIONS_ALLOWED } from '../../../fixtures/formsubmit-api';
 import type { RequestDetails } from '../../../pages/monsters/MonstersPage';
-import { MONSTER_SERVICES, TEST_EMAIL } from '../../utils/testData';
+import { MONSTER_SERVICES, REAL_SUBMIT_EMAIL } from '../../utils/testData';
 import { MONSTERS_URL } from '../../../sites';
 
 // Backend tests for the request form: the HTTP API behind it (FormSubmit), without a browser.
@@ -98,7 +98,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
       const contract = await formApi.contract('en');
       const details: RequestDetails = {
         name: 'Playwright API Test',
-        email: TEST_EMAIL,
+        email: REAL_SUBMIT_EMAIL,
         service: MONSTER_SERVICES.en[4], // "Not sure"
         quantity: 1,
         fileLink: '',
@@ -140,7 +140,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
       const contract = await formApi.contract('en');
       const body = formApi.body(contract, {
         name: 'Playwright API Test (should be rejected)',
-        email: TEST_EMAIL,
+        email: REAL_SUBMIT_EMAIL,
         service: MONSTER_SERVICES.en[4],
         description: '[AUTOMATED API TEST - please ignore] This post has no Referer and must be rejected.',
       });

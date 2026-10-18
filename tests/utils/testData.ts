@@ -27,6 +27,8 @@ export function createShippingInfo(overrides: Partial<ShippingInfo> = {}): Shipp
 
 /** Email address entered into forms as test data (the project owner's own inbox). */
 export const TEST_EMAIL = 'adamrzymowski@gmail.com';
+/** Email entered in REAL (opt-in) submissions; SUBMIT_EMAIL overrides it for a run. */
+export const REAL_SUBMIT_EMAIL = process.env.SUBMIT_EMAIL ?? TEST_EMAIL;
 
 /** Service dropdown options on the Substandard Monsters request form, per language. */
 export const MONSTER_SERVICES = {

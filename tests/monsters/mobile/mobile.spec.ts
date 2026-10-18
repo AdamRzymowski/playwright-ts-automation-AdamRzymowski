@@ -197,7 +197,8 @@ test.describe('Mobile view', () => {
 
       await expect(site.fieldError('Description')).toHaveText(site.labels.badges.minWords);
       await expect(site.fieldError('Description')).toBeInViewport();
-      await expect(site.field('Description')).toBeFocused();
+      // v1.6.0 deliberately doesn't move focus or scroll; the field is marked instead.
+      await expect(site.field('Description')).toHaveAttribute('aria-invalid', 'true');
     });
   });
 
