@@ -4,9 +4,10 @@
 //   npm run tests -- --suite=ui|api|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
 //                    --env=live|dev|local  --preview=<pull request number or preview URL>
 //                    --browsers=desktop|mobile|browserstack|all (comma-separate several)
+//                    --together (one combined run instead of one run per browser)
 //                    --perf=smoke|load  --testiny  --no-report (still builds the Allure report, just doesn't open it)
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 
 try {
@@ -201,12 +202,10 @@ if (browserSets.includes('browserstack')) {
     process.exit(2);
   }
 }
-const projectFlags = [
-  ...(browserTests.length ? browserSets.flatMap((b) => BROWSER_SETS[b].projects) : []),
-  ...(playwrightSuites.includes('api') ? ['api'] : []),
-]
-  .map((p) => ` --project=${p}`)
-  .join('');
+const browserProjects = browserTests.length ? browserSets.flatMap((b) => BROWSER_SETS[b].projects) : [];
+const runApi = playwrightSuites.includes('api');
+// Default: every browser gets its own run, Allure report and PDF. --together runs them all at once.
+const together = Boolean(args.together);
 
 let perfType = args.perf ?? 'smoke';
 if (suites.includes('perf') && !args.perf) {
@@ -240,8 +239,43 @@ const run = (cmd) => {
   return spawnSync(cmd, { stdio: 'inherit', env, shell: true }).status ?? 1;
 };
 const results = [];
-let allureBuilt = false;
 const runStarted = Date.now();
+
+const PROJECT_NAMES = {
+  chromium: 'Chrome',
+  firefox: 'Firefox',
+  edge: 'Edge',
+  'mobile-chrome': 'Mobile Chrome',
+  'mobile-edge': 'Mobile Edge',
+  'bs-mac-safari': 'Mac Safari (BrowserStack)',
+  'bs-mac-chrome': 'Mac Chrome (BrowserStack)',
+  api: 'API',
+};
+const reports = []; // [run name, allure folder, pdf]
+
+/** Builds this run's Allure report and PDF before the next run clears allure-results/. */
+function buildReports(slug, title, reportPlaywright) {
+  let allureDir = null;
+  if (reportPlaywright) {
+    allureDir = slug ? `allure-report/by-browser/${slug}` : 'allure-report';
+    if (run(`npx allure generate allure-results --output ${allureDir} --name "${title}"`) !== 0) allureDir = null;
+  }
+  const pdfRun = spawnSync('node tools/report-pdf.mjs', {
+    shell: true,
+    env: {
+      ...env,
+      MONSTERS_URL: siteUrl,
+      RUN_STARTED: String(runStarted),
+      REPORT_PLAYWRIGHT: reportPlaywright ? '1' : '0',
+      REPORT_SUFFIX: slug ?? '',
+      REPORT_TITLE: title,
+    },
+    encoding: 'utf8',
+  });
+  const pdf = pdfRun.stdout?.match(/PDF report: (.+)/)?.[1]?.trim() ?? null;
+  if (!pdf) console.error(`\nCould not create the PDF report:\n${pdfRun.stderr ?? ''}`);
+  reports.push([title, allureDir, pdf]);
+}
 
 if (playwrightSuites.length) {
   // UI = tests without an @api/@a11y tag. With UI chosen, leave out the tagged suites not chosen;
@@ -253,16 +287,50 @@ if (playwrightSuites.length) {
       ? ` --grep-invert "${otherTags.join('|')}"`
       : ''
     : ` --grep "${chosenTags.join('|')}"`;
-  const name = playwrightSuites.map((s) => SUITES[s].label).join(' + ');
-  const where = browserTests.length ? ` on ${browserSets.map((b) => b[0].toUpperCase() + b.slice(1)).join(' + ')}` : '';
-  results.push([`${name}${where}`, run(`npx playwright test${filter}${projectFlags}`)]);
-  // Always build the Allure report (allure-report/, git-ignored); opening it is optional.
-  const allureStatus = run('npx allure generate allure-results');
-  allureBuilt = allureStatus === 0;
-  if (allureBuilt && openReport && !process.env.CI) {
-    // Serve it in the background so the runner can finish; the viewer keeps running until closed.
-    spawn('npx allure open allure-report', { shell: true, detached: true, stdio: 'ignore' }).unref();
-    console.log('\nOpening the Allure report in your browser...');
+  const name = browserTests.map((s) => SUITES[s].label).join(' + ');
+  const flags = (projects) => projects.map((p) => ` --project=${p}`).join('');
+
+  if (together || browserProjects.length <= 1) {
+    const projects = [...browserProjects, ...(runApi ? ['api'] : [])];
+    const title = playwrightSuites.map((s) => SUITES[s].label).join(' + ') + (browserProjects.length ? ` on ${browserProjects.map((p) => PROJECT_NAMES[p] ?? p).join(', ')}` : '');
+    results.push([title, run(`npx playwright test${filter}${flags(projects)}`)]);
+    buildReports(null, title, true);
+  } else {
+    // One complete run per browser, one after another, each with its own reports.
+    for (const project of browserProjects) {
+      const title = `${name} on ${PROJECT_NAMES[project] ?? project}`;
+      console.log(`\n================ ${title} ================`);
+      results.push([title, run(`npx playwright test${filter}${flags([project])}`)]);
+      buildReports(project, title, true);
+    }
+    if (runApi) {
+      console.log('\n================ API tests ================');
+      results.push(['API tests', run(`npx playwright test --grep "@api"${flags(['api'])}`)]);
+      buildReports('api', 'API tests', true);
+    }
+    // A small start page linking the per-browser Allure reports.
+    const links = reports
+      .filter(([, dir]) => dir?.startsWith('allure-report/by-browser/'))
+      .map(([title, dir], i) => {
+        const status = results.find(([n]) => n === title)?.[1] === 0 ? 'passed' : 'failed';
+        return `<li class="${status}"><a href="${dir.split('/').pop()}/index.html">${title}</a> <span>${status}</span></li>`;
+      })
+      .join('\n');
+    writeFileSync(
+      'allure-report/by-browser/index.html',
+      `<!doctype html><meta charset="utf-8"><title>Test reports by browser</title>
+<style>body{font:15px system-ui,sans-serif;margin:40px;color:#1d2433}li{margin:10px 0}a{color:#3a5bd9}span{font-size:12px;font-weight:700;text-transform:uppercase;margin-left:8px}.passed span{color:#1a7f45}.failed span{color:#c2272d}</style>
+<h1>Test reports by browser</h1><p>${new Date().toLocaleString('en-GB')} · ${ENVS[target].label} (${siteUrl})</p><ul>${links}</ul>`,
+    );
+  }
+
+  if (openReport && !process.env.CI) {
+    const dir = reports.length > 1 ? 'allure-report/by-browser' : reports[0]?.[1];
+    if (dir) {
+      // Serve it in the background so the runner can finish; the viewer keeps running until closed.
+      spawn(`npx allure open ${dir}`, { shell: true, detached: true, stdio: 'ignore' }).unref();
+      console.log('\nOpening the Allure report in your browser...');
+    }
   }
 }
 
@@ -283,27 +351,22 @@ if (suites.includes('perf')) {
     if (existsSync(`reports/k6-${perfType}-report.html`)) {
       console.log(`\nk6 dashboard: reports/k6-${perfType}-report.html`);
     }
+    buildReports('performance', `Performance (${perfType})`, false);
   }
 }
-
-// 5. PDF report of this run (reports/, git-ignored)
-let pdf = null;
-const pdfRun = spawnSync('node tools/report-pdf.mjs', {
-  shell: true,
-  env: { ...env, MONSTERS_URL: siteUrl, RUN_STARTED: String(runStarted), REPORT_PLAYWRIGHT: playwrightSuites.length ? '1' : '0' },
-  encoding: 'utf8',
-});
-pdf = pdfRun.stdout?.match(/PDF report: (.+)/)?.[1]?.trim() ?? null;
-if (!pdf) console.error(`
-Could not create the PDF report:
-${pdfRun.stderr ?? ''}`);
 
 // 6. Summary
 console.log('\n================ Summary ================');
 console.log(`  Site: ${ENVS[target].label} (${siteUrl})`);
-for (const [name, status] of results) console.log(`  ${status === 0 ? 'PASSED' : 'FAILED'}  ${name}`);
+for (const [name, status] of results) {
+  const [, allureDir, pdf] = reports.find(([t]) => t === name) ?? [];
+  console.log(`  ${status === 0 ? 'PASSED' : 'FAILED'}  ${name}`);
+  if (allureDir) console.log(`          Allure: ${allureDir}/`);
+  if (pdf) console.log(`          PDF:    ${pdf}`);
+}
+if (reports.length > 1 && existsSync('allure-report/by-browser/index.html')) {
+  console.log('  All Allure reports: npx allure open allure-report/by-browser');
+}
 if (testiny) console.log('  Results uploaded to Testiny (Automation tab).');
-if (allureBuilt) console.log('  Allure report: allure-report/ (open it with npm run allure:open)');
-if (pdf) console.log(`  PDF report: ${pdf}`);
 console.log('=========================================\n');
 process.exit(results.some(([, s]) => s !== 0) ? 1 : 0);

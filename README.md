@@ -135,6 +135,12 @@ against the live site.
 | `npm run tests -- --suite=all` | Everything |
 | `npm run tests -- --suite=ui,a11y --no-report` | Several suites; the Allure report is still built, just not opened |
 
+**One run per browser.** When several browsers are chosen, the runner tests them one after another, each as
+its own complete run (Chrome, then Firefox, then Edge, ...), with its own Allure report
+(`allure-report/by-browser/<browser>/`, plus a start page linking them all) and its own PDF
+(`reports/test-report-<date>_<time>-<browser>.pdf`). The summary shows PASSED/FAILED per browser.
+Add `--together` to run all browsers in one combined run with a single report instead.
+
 Add `--testiny` to upload the Playwright results to Testiny.
 
 **Without typing:** **Terminal > Run Task...** (or `Ctrl+Shift+P` > *Tasks: Run Task*) lists ready-made

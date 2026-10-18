@@ -229,7 +229,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   .fail img { max-width: 60%; border: 1px solid #ddd; margin-top: 6px; } .ok { color: #1a7f45; font-weight: 600; } .bad { color: #c2272d; font-weight: 600; }
   .sev { text-transform: capitalize; } .break { page-break-before: always; }
 </style></head><body>
-<h1>Test report</h1>
+<h1>Test report${process.env.REPORT_TITLE ? `: ${esc(process.env.REPORT_TITLE)}` : ''}</h1>
 <div class="muted">Playwright TS Automation · ${new Date(isFinite(started) ? started : Date.now()).toLocaleString('en-GB')}${isFinite(started) ? ` · duration ${ms(stopped - started)}` : ''}</div>
 
 <h2>Run details</h2>
@@ -351,7 +351,9 @@ mkdirSync(OUT_DIR, { recursive: true });
 const now = new Date();
 const pad = (n) => String(n).padStart(2, '0');
 const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-const out = join(OUT_DIR, `test-report-${stamp}.pdf`);
+// REPORT_SUFFIX (e.g. a browser name) keeps one PDF per run when the runner tests browsers one by one.
+const suffix = process.env.REPORT_SUFFIX ? `-${process.env.REPORT_SUFFIX}` : '';
+const out = join(OUT_DIR, `test-report-${stamp}${suffix}.pdf`);
 const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.setContent(html, { waitUntil: 'load' });
