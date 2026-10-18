@@ -38,7 +38,8 @@
     "test:monsters:local": "cross-env MONSTERS_ENV=local playwright test tests/monsters",
     "test:live": "node tools/run-tests.mjs --env=live",
     "test:preview": "node tools/run-tests.mjs --preview",
-    "test:dev": "node tools/run-tests.mjs --env=dev"
+    "test:dev": "node tools/run-tests.mjs --env=dev",
+    "manual:build": "node tools/build-manual-tests.mjs"
   },
   "keywords": [],
   "author": "",

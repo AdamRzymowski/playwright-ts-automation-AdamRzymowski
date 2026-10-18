@@ -172,6 +172,24 @@ Desktop or Mobile by `fixtures/base.ts`. Each run starts
 with empty `allure-results/`; run history is kept in `allure-history/`, so trend charts grow with every
 report you generate.
 
+## Manual test cases
+
+`Manual tests/` holds a manual test case for every automated UI test (79 cases: Substandard Monsters and
+Sauce Demo, desktop and mobile), for testing by hand or importing into a test management tool:
+
+| File | What it is |
+| --- | --- |
+| `manual-test-cases.pdf` | Printable: contents page, then one card per case |
+| `manual-test-cases.csv` | Spreadsheet / Testiny import: one row per step (steps delimiter **rows**, folder delimiter **>**) |
+| `manual-test-cases.mjs` | The source: edit cases here |
+
+Each case has a number (`MT-001`...), title, site and area, **platform** (desktop browsers, phone or tablet
+size), **version** (the site version it was written for, plus the test case version), priority,
+preconditions, numbered steps with expected results, and the automated test it mirrors.
+
+After editing the source or the UI tests, run `npm run manual:build`. It rebuilds the CSV and PDF and checks
+that every automated UI test still has exactly one manual case (and points out any that don't).
+
 ## Where test results go
 
 Results never go into the git repository. Every output folder is in `.gitignore`, so GitHub only holds
