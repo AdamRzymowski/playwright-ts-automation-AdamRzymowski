@@ -63,7 +63,7 @@ for (const r of results) {
     file: r.fullName.split(' › ')[0].replace(/\\/g, '/'),
     platform: platformOf(r),
     // Skipped-early tests have no Allure labels; fall back to the file and describe() names.
-    site: label(r, 'epic') ?? (r.fullName.startsWith('monsters') ? 'Substandard Monsters' : 'Web shop'),
+    site: label(r, 'epic') ?? 'Substandard Monsters',
     feature: label(r, 'feature') ?? label(r, 'subSuite') ?? 'Other',
     story: label(r, 'story') ?? '',
     severity: label(r, 'severity') ?? 'normal',
@@ -141,7 +141,6 @@ const appVersion = await fetch(`${siteUrl}/script.js`)
   .catch(() => '—');
 const env = [
   ['Site', `Substandard Monsters${process.env.MONSTERS_ENV ? ` (${process.env.MONSTERS_ENV})` : ''}: ${siteUrl} · app version ${appVersion}`],
-  ['Also tested', 'Sauce Demo: https://www.saucedemo.com'],
   ['Test code', `${sh('git rev-parse --abbrev-ref HEAD') || '?'} @ ${sh('git rev-parse --short HEAD') || '?'}${sh('git status --porcelain') ? ' (with uncommitted changes)' : ''}`],
   ['Machine', `${os.type()} ${os.release()} · ${os.cpus().length} CPUs · Node ${process.version}`],
   ['Playwright', require('@playwright/test/package.json').version],

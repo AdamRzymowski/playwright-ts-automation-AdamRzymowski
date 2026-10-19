@@ -1,12 +1,11 @@
 import './env';
 import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
-import { MONSTERS_DIR, MONSTERS_ENV, MONSTERS_IS_LOCAL, MONSTERS_PORT, MONSTERS_URL, SAUCEDEMO_URL } from './sites';
+import { MONSTERS_DIR, MONSTERS_ENV, MONSTERS_IS_LOCAL, MONSTERS_PORT, MONSTERS_URL } from './sites';
 
 /**
- * Sites under test (URLs in sites.ts):
- * - tests/saucedemo/  https://www.saucedemo.com, public e-commerce practice site (BASE_URL to override)
- * - tests/monsters/   Substandard Monsters website: MONSTERS_ENV=live | dev | local (default local, the
- *                     ../Substandard-Monsters folder); MONSTERS_URL overrides with any address
+ * Site under test (URLs in sites.ts): the Substandard Monsters website, tests in tests/monsters/.
+ * MONSTERS_ENV=live | dev | local (default local, the ../Substandard-Monsters folder);
+ * MONSTERS_URL overrides with any address.
  *
  * Browsers run side by side: every desktop spec runs once per desktop project, every
  * mobile spec once per mobile project, spread across parallel workers.
@@ -106,7 +105,6 @@ export default defineConfig({
         detail: true,
         suiteTitle: true,
         environmentInfo: {
-          'Saucedemo URL': SAUCEDEMO_URL,
           'Monsters environment': MONSTERS_ENV,
           'Monsters URL': MONSTERS_URL,
           Node: process.version,
@@ -118,10 +116,9 @@ export default defineConfig({
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Default site; Monsters specs override this in fixtures/monsters.ts. */
-    baseURL: SAUCEDEMO_URL,
-    /* saucedemo marks elements with data-test="...", so getByTestId() reads that attribute. */
-    testIdAttribute: 'data-test',
+    baseURL: MONSTERS_URL,
+    /* The site marks elements with data-testid="...", which getByTestId() reads. */
+    testIdAttribute: 'data-testid',
     /* Headless by default; HEADED=1 / --headed (npm run tests asks) shows the browser windows. */
     headless: !process.env.HEADED,
     /*

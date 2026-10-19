@@ -1,6 +1,4 @@
-/** Sites under test. Each can be pointed elsewhere with an environment variable (e.g. in .env). */
-
-export const SAUCEDEMO_URL = process.env.BASE_URL ?? 'https://www.saucedemo.com';
+/** The site under test (Substandard Monsters). Point it elsewhere with environment variables (e.g. in .env). */
 
 /**
  * Substandard Monsters environments:

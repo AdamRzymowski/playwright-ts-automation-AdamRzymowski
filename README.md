@@ -1,12 +1,10 @@
 # Playwright TypeScript Automation
 
-Example web automation project with [Playwright](https://playwright.dev) and TypeScript. It tests two
-sites on Chrome, Firefox and Edge in parallel, plus a mobile view, and draws results in an
-[Allure](https://allurereport.org) dashboard:
-
-- **saucedemo** - the public demo shop [saucedemo.com](https://www.saucedemo.com)
-- **monsters** - the Substandard Monsters 3D-printing website, served from a local checkout of
-  [substandard-monsters](https://github.com/AdamRzymowski/substandard-monsters) at `../Substandard-Monsters`
+Test automation for the **Substandard Monsters** 3D-printing website (https://substandard-monsters.com,
+repo [substandard-monsters](https://github.com/AdamRzymowski/substandard-monsters)) with
+[Playwright](https://playwright.dev) and TypeScript. It runs on Chrome, Firefox and Edge at desktop and phone
+size, checks the request form's backend (FormSubmit), accessibility (WCAG 2.2 AA) and performance (k6), and
+draws results in an [Allure](https://allurereport.org) dashboard and a PDF.
 
 ## Substandard Monsters tests
 
@@ -110,7 +108,7 @@ It asks what to run:
 ```
 Which tests do you want to run?
 
-  1) UI tests  - functional browser tests of both sites, desktop + mobile
+  1) UI tests  - functional browser tests of the site, desktop + mobile
   2) API tests  - request form backend (FormSubmit), no browser
   3) Accessibility tests  - WCAG 2.2 AA scans and keyboard checks
   4) Performance tests  - k6 against the live Substandard Monsters site
@@ -175,13 +173,12 @@ Or run Playwright directly:
 | `npm run test:smoke` | Only tests tagged `@smoke` |
 | `npm run test:ui-only` | UI tests only (everything not tagged `@a11y`) |
 | `npm run test:a11y` | Accessibility tests only (tagged `@a11y`) |
-| `npm run test:saucedemo` / `test:monsters` | One site |
 | `npm run test:desktop` | Chrome + Firefox + Edge |
 | `npm run test:mobile` | Mobile emulation (Pixel 7 on Chrome and Edge) |
 | `npm run test:chrome` / `test:firefox` / `test:edge` | One browser |
 | `npm run codegen` | Record clicks in a browser and generate test code |
 
-Point saucedemo tests elsewhere with `BASE_URL`; Monsters tests with `MONSTERS_ENV` / `MONSTERS_URL` (see `sites.ts`).
+Point the tests at another copy of the site with `MONSTERS_ENV` / `MONSTERS_URL` (see `sites.ts`).
 
 ## Reports
 
@@ -209,8 +206,9 @@ reproduce, expected vs actual, possible fixes and the tests that cover each one.
 
 ## Manual test cases
 
-`Manual tests/` holds a manual test case for every automated UI test (127 cases: Substandard Monsters and
-Sauce Demo, desktop and mobile), for testing by hand or importing into a test management tool:
+`Manual tests/` holds a manual test case for every automated UI test (148 cases, desktop and mobile), for
+testing by hand or importing into a test management tool. MT-067 to MT-079 were the removed demo-shop
+cases; their numbers are kept unused so the other case numbers don't change.
 
 | File | What it is |
 | --- | --- |
@@ -316,27 +314,30 @@ sites.ts                 URLs of the sites under test
 global-setup.ts          Clears old Allure results before each run
 allurerc.mjs             Allure report settings (name, plugins, history)
 tools/serve-static.mjs   Tiny static server for the local Monsters site
-pages/<site>/            Page objects: one class per page, holding its locators and actions
-fixtures/<site>.ts       Extended `test` per site (page objects, login, email blocking)
-tests/<site>/e2e/        Desktop specs (run on chromium, firefox, edge)
-tests/<site>/mobile/     Mobile specs (run on mobile-chrome, mobile-edge)
-tests/utils/testData.ts  Demo users, product names, Faker data builders
+pages/monsters/          Page object: the site's locators, texts (EN/PL) and actions
+fixtures/monsters.ts     Extended `test` (page objects, FormSubmit blocking, step screenshots)
+fixtures/formsubmit-api.ts  `test` for the API tests (form contract, real submission helper)
+tests/monsters/e2e/      Desktop specs (also run in phone view on every browser)
+tests/monsters/mobile/   Phone-only layout specs (mobile-chrome, mobile-firefox, mobile-edge)
+tests/monsters/api/      Backend tests of the request form (no browser)
+tests/utils/             Faker data builders, multipart parser, accessibility helper
 ```
 
 ## Writing a test
 
 ```ts
 import * as allure from 'allure-js-commons';
-import { test, expect } from '../../../fixtures/saucedemo';
+import { test, expect } from '../../../fixtures/monsters';
 
-test('my test', { tag: ['@smoke'] }, async ({ loggedIn, cartPage }) => {
-  await allure.feature('Cart');
-  await loggedIn.addToCart('Sauce Labs Backpack');
-  await loggedIn.openCart();
-  await expect(cartPage.itemNames).toHaveText(['Sauce Labs Backpack']);
+test('Facebook button is in the contact section', { tag: ['@smoke'] }, async ({ site }) => {
+  await allure.epic('Substandard Monsters');
+  await allure.feature('Facebook');
+  await site.goto('#contact');
+  await expect(site.contactFacebook).toBeVisible();
 });
 ```
 
-- Put a spec in `tests/<site>/e2e/` to run it on desktop browsers, or `tests/<site>/mobile/` for mobile.
+- Put a spec in `tests/monsters/e2e/` to run it at desktop and phone size, or `tests/monsters/mobile/` for
+  phone-only layout checks.
 - Use `expect.soft(...)` to check many things and report every failure, not just the first.
 - Use `test.step(...)` to break a test into named steps; they show up in both reports.

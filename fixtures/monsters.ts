@@ -23,7 +23,7 @@ type Fixtures = {
 export const test = withStepScreenshots(
   base.extend<Fixtures & Options>({
     baseURL: MONSTERS_URL,
-    /* The site marks elements with data-testid="..." (saucedemo uses data-test). */
+    /* The site marks elements with data-testid="..." (also the default in playwright.config.ts). */
     testIdAttribute: 'data-testid',
     allowRealEmails: [false, { option: true }],
 

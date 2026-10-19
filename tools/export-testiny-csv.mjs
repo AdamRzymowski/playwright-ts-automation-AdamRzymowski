@@ -54,16 +54,14 @@ for (const file of readdirSync(resultsDir).filter((f) => f.endsWith('-result.jso
   const spec = r.fullName.split(' › ')[0]; // "monsters/e2e/request-form.spec.ts"
   const folder = [platform, label(r, 'epic'), label(r, 'feature'), label(r, 'story')].filter(Boolean).join(' > ');
   const severity = label(r, 'severity') ?? 'normal';
-  const site = (label(r, 'epic') ?? '').startsWith('Substandard')
-    ? 'https://substandard-monsters.com'
-    : 'https://www.saucedemo.com';
+  const site = 'https://substandard-monsters.com';
 
   cases.set(key, {
     folder,
     title: r.name,
     precondition: [
       `Open ${site}.`,
-      site.includes('saucedemo') ? '' : 'Request form emails are NOT sent: the automated test fakes the FormSubmit reply.',
+      'Request form emails are NOT sent: the automated test fakes the FormSubmit reply.',
       r.description ? r.description : '',
     ]
       .filter(Boolean)

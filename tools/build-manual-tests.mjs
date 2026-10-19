@@ -8,16 +8,17 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const DIR = 'Manual tests';
-const { CASES, SITES, PLATFORMS, CASE_VERSION, WRITTEN } = await import(pathToFileURL(join(DIR, 'manual-test-cases.mjs')).href);
+const { CASES, SITES, PLATFORMS, CASE_VERSION, WRITTEN, RETIRED } = await import(pathToFileURL(join(DIR, 'manual-test-cases.mjs')).href);
 
-const cases = CASES.map((c, i) => ({
+// Numbers follow the position in CASES; RETIRED placeholders keep removed cases' numbers reserved.
+const cases = CASES.map((c, i) => (c === RETIRED ? null : {
   ...c,
   id: `MT-${String(i + 1).padStart(3, '0')}`,
   siteName: SITES[c.site].name,
   appVersion: SITES[c.site].appVersion,
   platformText: PLATFORMS[c.platform],
   platformShort: c.platform === 'desktop' ? 'Desktop' : c.platform === 'tablet' ? 'Tablet' : 'Mobile',
-}));
+})).filter(Boolean);
 
 // ---- Coverage check: one manual case per automated UI test ----------------------------------
 const list = spawnSync('npx playwright test --list --reporter=json --grep-invert "@api|@a11y"', {

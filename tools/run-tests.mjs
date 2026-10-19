@@ -18,7 +18,7 @@ try {
 }
 
 const SUITES = {
-  ui: { label: 'UI tests', detail: 'functional browser tests of both sites, desktop + mobile' },
+  ui: { label: 'UI tests', detail: 'functional browser tests of the site, desktop + mobile' },
   api: { label: 'API tests', detail: 'request form backend (FormSubmit), no browser' },
   a11y: { label: 'Accessibility tests', detail: 'WCAG 2.2 AA scans and keyboard checks' },
   perf: { label: 'Performance tests', detail: 'k6 against the live Substandard Monsters site' },

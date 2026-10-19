@@ -3,11 +3,12 @@
 // Each case: title, site, area, platform, priority, preconditions, steps [action, expected result], automated test.
 
 export const CASE_VERSION = '1.0';
+/** Placeholder that keeps a removed case's number reserved (build skips it). */
+export const RETIRED = Symbol('retired');
 export const WRITTEN = '2026-10-18 (updated for site v1.7.0 / v1.8.0)';
 
 export const SITES = {
-  monsters: { name: 'Substandard Monsters', url: 'https://substandard-monsters.com', appVersion: '1.7.0 live / 1.8.0 dev (footer version)' },
-  saucedemo: { name: 'Sauce Demo', url: 'https://www.saucedemo.com', appVersion: 'Public demo site (not versioned)' },
+  monsters: { name: 'Substandard Monsters', url: 'https://substandard-monsters.com', appVersion: '1.8.0 (footer "v1.8.0")' },
 };
 
 export const PLATFORMS = {
@@ -23,10 +24,8 @@ const NO_EMAIL =
   'Real submissions email the site owner. Unless the case says otherwise, block the form service first: ' +
   'DevTools (F12) > Network > right-click any request > Block request URL, enter "formsubmit.co" ' +
   '(or use test data marked TEST if a real email is acceptable).';
-const SAUCE_LOGIN = 'Open https://www.saucedemo.com and log in as standard_user / secret_sauce.';
 
 const m = (o) => ({ site: 'monsters', platform: 'desktop', priority: 'Medium', ...o });
-const s = (o) => ({ site: 'saucedemo', platform: 'desktop', priority: 'Medium', ...o });
 
 export const CASES = [
   // ---------------------------------------------------------------- Substandard Monsters: home page
@@ -628,133 +627,10 @@ export const CASES = [
     },
   ].map((c) => m({ platform: 'mobile', pre: 'Open https://substandard-monsters.com on the phone.', ...c })),
 
-  // ---------------------------------------------------------------- Sauce Demo: desktop
-  s({
-    title: 'Standard user can log in',
-    area: 'Sauce Demo > Login',
-    priority: 'Critical',
-    pre: 'Open https://www.saucedemo.com.',
-    steps: [
-      ['Enter standard_user / secret_sauce and click Login.', 'Products page opens (address ends "inventory.html").'],
-      ['Look at the page.', 'Title "Products"; 6 products listed; no number on the cart icon.'],
-    ],
-    auto: 'saucedemo/e2e/login.spec.ts › standard user can log in',
-  }),
-  s({
-    title: 'Locked-out user sees an error',
-    area: 'Sauce Demo > Login',
-    priority: 'High',
-    pre: 'Open https://www.saucedemo.com.',
-    steps: [['Enter locked_out_user / secret_sauce and click Login.', 'Stays on the login page; error "Epic sadface: Sorry, this user has been locked out."']],
-    auto: 'saucedemo/e2e/login.spec.ts › locked out user sees an error',
-  }),
-  s({
-    title: 'Empty login form shows validation messages',
-    area: 'Sauce Demo > Login',
-    pre: 'Open https://www.saucedemo.com.',
-    steps: [
-      ['Click Login with both fields empty.', 'Error "Username is required".'],
-      ['Enter standard_user only and click Login.', 'Error "Password is required".'],
-    ],
-    auto: 'saucedemo/e2e/login.spec.ts › empty form shows validation messages',
-  }),
-  s({
-    title: 'User can log out',
-    area: 'Sauce Demo > Login',
-    priority: 'High',
-    pre: SAUCE_LOGIN,
-    steps: [['Open the ☰ menu and click Logout.', 'Login page is shown with the Login button.']],
-    auto: 'saucedemo/e2e/login.spec.ts › user can log out',
-  }),
-  s({
-    title: 'Every product card is complete',
-    area: 'Sauce Demo > Products',
-    pre: SAUCE_LOGIN,
-    steps: [['Check each of the 6 product cards.', 'Each has a name, description, price like "$29.99", an image and an enabled "Add to cart" button.']],
-    auto: 'saucedemo/e2e/inventory.spec.ts › every product card is complete',
-  }),
-  s({
-    title: 'Sort products by price, low to high',
-    area: 'Sauce Demo > Products',
-    pre: SAUCE_LOGIN,
-    steps: [['Choose "Price (low to high)" in the sort box.', 'Prices go up from top to bottom.']],
-    auto: 'saucedemo/e2e/inventory.spec.ts › sort by price, low to high',
-  }),
-  s({
-    title: 'Sort products by name, Z to A',
-    area: 'Sauce Demo > Products',
-    pre: SAUCE_LOGIN,
-    steps: [['Choose "Name (Z to A)" in the sort box.', 'Names are in reverse alphabetical order; the sort box shows "Name (Z to A)".']],
-    auto: 'saucedemo/e2e/inventory.spec.ts › sort by name, Z to A',
-  }),
-  s({
-    title: 'Adding and removing products updates the cart badge',
-    area: 'Sauce Demo > Products',
-    priority: 'High',
-    pre: SAUCE_LOGIN,
-    steps: [
-      ['Add "Sauce Labs Backpack" and "Sauce Labs Bike Light" to the cart.', 'Cart icon shows 2.'],
-      ['Click Remove on the backpack.', 'Cart icon shows 1.'],
-      ['Click Remove on the bike light.', 'Cart icon shows no number.'],
-    ],
-    auto: 'saucedemo/e2e/inventory.spec.ts › add and remove products updates the cart badge',
-  }),
-  s({
-    title: 'Complete a purchase',
-    area: 'Sauce Demo > Checkout',
-    priority: 'Critical',
-    pre: SAUCE_LOGIN,
-    steps: [
-      ['Add "Sauce Labs Backpack" and "Sauce Labs Bolt T-Shirt", open the cart.', 'Cart lists both products.'],
-      ['Click Checkout, enter any first name, last name and postal code, click Continue.', '"Checkout: Overview" page opens.'],
-      ['Check the totals.', 'Item total equals the sum of the prices; tax is above 0; Total = item total + tax.'],
-      ['Click Finish.', '"Thank you for your order!" is shown; the cart icon is empty.'],
-    ],
-    auto: 'saucedemo/e2e/checkout.spec.ts › complete purchase with Faker shipping details',
-  }),
-  s({
-    title: 'Shipping form requires every field',
-    area: 'Sauce Demo > Checkout',
-    pre: SAUCE_LOGIN + ' Add one product, open the cart and click Checkout.',
-    steps: [
-      ['Leave First Name empty, fill the rest, click Continue.', 'Error "First Name is required".'],
-      ['Fill First Name, clear Last Name, click Continue.', 'Error "Last Name is required".'],
-      ['Fill Last Name, clear Postal Code, click Continue.', 'Error "Postal Code is required".'],
-    ],
-    auto: 'saucedemo/e2e/checkout.spec.ts › shipping form requires every field',
-  }),
+  // MT-067 to MT-079: demo-shop (Sauce Demo) cases, removed 2026-10-19 with their tests.
+  // Their numbers stay reserved so the other case numbers don't change.
+  ...Array(13).fill(RETIRED),
 
-  // ---------------------------------------------------------------- Sauce Demo: mobile
-  s({
-    title: 'Site works on a phone screen with touch',
-    area: 'Sauce Demo > Mobile',
-    platform: 'mobile',
-    priority: 'Low',
-    pre: 'Use a phone (or DevTools device mode "Pixel 7").',
-    steps: [['Open https://www.saucedemo.com.', 'Page fits the narrow screen (under 500 px wide) and responds to taps.']],
-    auto: 'saucedemo/mobile/mobile.spec.ts › runs with a phone viewport and touch',
-  }),
-  s({
-    title: 'Product cards stack in a single column',
-    area: 'Sauce Demo > Mobile',
-    platform: 'mobile',
-    pre: SAUCE_LOGIN + ' (on the phone)',
-    steps: [['Look at the product list.', 'One product per row; cards fit inside the screen; no sideways scrolling.']],
-    auto: 'saucedemo/mobile/mobile.spec.ts › product cards stack in a single column',
-  }),
-  s({
-    title: 'Menu and cart work with taps',
-    area: 'Sauce Demo > Mobile',
-    platform: 'mobile',
-    priority: 'High',
-    pre: SAUCE_LOGIN + ' (on the phone)',
-    steps: [
-      ['Tap "Add to cart" on Sauce Labs Backpack.', 'Cart icon shows 1.'],
-      ['Tap the cart icon.', 'Cart lists Sauce Labs Backpack.'],
-      ['Tap ☰ > Logout.', 'Login page is shown.'],
-    ],
-    auto: 'saucedemo/mobile/mobile.spec.ts › menu and cart work with taps',
-  }),
   // ================================================================ Added for site v1.6.0
   // (appended so existing case numbers stay the same)
 
