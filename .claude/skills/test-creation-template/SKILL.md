@@ -1,98 +1,160 @@
 ---
 name: test-creation-template
-description: Template and checklist for adding a new automated test to this project (Substandard Monsters website, Playwright + TypeScript). Use EVERY time the user asks to add, create or write a test, a check, or test cases for something - one test or many. Covers where the test goes, how to name it, the code template, mocking FormSubmit, screenshots, running it, the matching manual test case and known issues.
+description: Template and checklist for adding new tests to the Substandard Monsters test project (Playwright + TypeScript). Use EVERY time the user asks to add, create or write a test, a check or test cases, one or many. Every test is first written as a test case definition (short title, prerequisites, test data, numbered steps, assertions per step), then turned into BOTH the automated Playwright test and the matching manual test case, so the two always agree and are easy to understand. Also covers placement, naming, the code template, FormSubmit mocking, screenshots, running, and logging known issues.
 ---
 
 # Test creation template
 
-Follow every step, in order, each time a test is added. Read `CLAUDE.md` first (testing boundaries).
+## Description
+
+This skill is how every new test is made in this project. The heart of it is the **test case
+definition**: a short, plain-language record of one test with a **title, prerequisites, test data,
+numbered steps and the assertions for each step**. It is written *before* any code. Both outputs are
+produced from it:
+
+- the **automated test** (Playwright): same title, prerequisites as setup, one `test.step` per step with
+  that step's assertions as `expect(...)` calls;
+- the **manual test case** (`Manual tests/manual-test-cases.mjs`, exported to CSV/PDF and Testiny): same
+  title, prerequisites, steps and expected results.
+
+So anyone can read what a test does without reading code, run it by hand, and see the same structure in the
+reports (each step and each assertion appears there with a ✓/✗ screenshot).
+
+Follow every section, in order. Read `CLAUDE.md` first (testing boundaries).
 
 ## 1. Understand what to test
-- Restate in one line what the test proves. If it's unclear what "correct" looks like, ask before coding.
-- Look at the real page (live site and/or `../Substandard-Monsters`): find the elements' `data-testid`
+- Restate in one line what the test proves. If it's unclear what "correct" looks like, ask before writing.
+- Look at the real page (live site and/or `../Substandard-Monsters`): the elements' `data-testid`
   attributes and the exact visible texts (English **and** Polish if the text is translated).
 
-## 2. Pick the place
+## 2. Write the test case definition (required for every test)
+Fill in this block for each test and show it to the user with the result. Keep every line short and in
+plain words a non-programmer understands.
+
+```
+Title:          <short sentence saying what is checked, e.g. "Quantity 0 is rejected">
+Area:           <feature › story, e.g. Request a print › Validation>
+Platform:       <Desktop + phone view (e2e) | Phone only (mobile) | API (no browser)>
+Priority:       <Critical | High | Medium | Low>
+Prerequisites:  <state before step 1: page/URL, language, what is mocked or blocked, logged data>
+Test data:      <values used, e.g. name from Faker, email TEST_EMAIL, quantity "0">
+Steps and assertions:
+  1. <action>                 → Expect: <observable result 1>; <result 2>
+  2. <action>                 → Expect: <observable result>
+  …
+```
+
+Rules for the definition:
+- **Title**: short sentence, sentence case, present tense, ideally under 70 characters, no codes; starts with
+  the thing tested (`Success pop-up closes with the Escape key`). Unique within its spec file.
+- **Prerequisites**: everything that must be true before step 1, including mocks ("FormSubmit reply faked:
+  success") so nothing real is sent. If none: "Site open at <page>".
+- **Steps**: 1–6 numbered actions a person could do by hand; one action per step.
+- **Assertions**: every step has at least one "Expect:", each one checkable by looking at the page (or the
+  response, for API tests). No step without an assertion.
+- **Test data**: concrete values or the builder that makes them; never real personal data.
+
+## 3. Pick the place
 | Test | Folder | Runs on |
 | --- | --- | --- |
 | Behaviour a visitor sees (default) | `tests/monsters/e2e/` | Chrome, Firefox, Edge at desktop **and** phone size |
 | Phone-only layout (hamburger, stacking) | `tests/monsters/mobile/` | the three browsers at phone size |
 | Request form backend, no browser | `tests/monsters/api/` | the `api` project |
 
-Add `{ tag: '@a11y' }` to accessibility tests and `{ tag: ['@security'] }` to security tests (on the test or
-its `describe`) so `npm run tests` can pick them. Add `@smoke` to the most important checks.
-Put the test in the existing spec file for that area if there is one; otherwise create `<area>.spec.ts`.
+Tags: `@a11y` (accessibility) and `@security` (security) on the test or its `describe` so `npm run tests` can
+pick them; `@smoke` for the most important checks. Use the existing spec file for the area if there is one;
+otherwise create `<area>.spec.ts`.
 
-## 3. Name it
-The title is a **short sentence that says what is checked and makes sense on its own**:
-- Sentence case, present tense, ideally under 70 characters, no ticket or WCAG codes.
-- Starts with the thing being tested: `Success pop-up closes with the Escape key`,
-  `Quantity 0 is rejected`, `Gallery photos open with the keyboard`.
-- Loop-generated tests build the same kind of sentence: `` `File link rejects ${kind}` ``.
-- Unique within its file (the manual cases link to tests by title).
+## 4. Write the automated test from the definition
+Map it one-to-one: **title → test title**, **prerequisites → setup + `allure.description`**, **each step →
+one `test.step` named like the step**, **each "Expect:" → an `expect(...)` inside that step**.
 
-## 4. Write it
 ```ts
 import * as allure from 'allure-js-commons';
 import { test, expect, FORMSUBMIT } from '../../../fixtures/monsters';
 import { createPrintRequest } from '../../utils/testData';
 
 test.describe('<Area>', () => {
-  test.beforeEach(async ({ site }) => {
+  test.beforeEach(async () => {
     await allure.epic('Substandard Monsters');
-    await allure.feature('<Feature>');          // e.g. 'Request a print', 'Gallery', 'Security'
-    await allure.story('<Story>');              // optional sub-area
-    await site.goto('#contact');                // or site.goto() / sitePl.goto()
+    await allure.feature('<Feature>');   // e.g. 'Request a print'
+    await allure.story('<Story>');       // e.g. 'Validation'
   });
 
-  test('<Brief description of what is checked>', { tag: ['@smoke'] }, async ({ page, site }) => {
-    await allure.severity(allure.Severity.CRITICAL); // BLOCKER / CRITICAL / NORMAL / MINOR
-    // FormSubmit must be mocked unless the user asked for a real submission (it emails the owner).
-    await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
+  test('Quantity 0 is rejected', async ({ page, site }) => {
+    await allure.severity(allure.Severity.NORMAL);
+    await allure.description('Prerequisites: request form open (English); FormSubmit reply faked, nothing is sent.');
 
-    await test.step('<phase in plain words>', async () => {
+    // Prerequisites
+    let sent = 0;
+    await page.route(FORMSUBMIT, (route) => {
+      sent++;
+      return route.fulfill({ json: { success: 'true' } });
+    });
+    await site.goto('#contact');
+
+    await test.step('1. Fill in the required fields and type 0 in Quantity', async () => {
       await site.fillRequest(createPrintRequest());
-      await site.submitButton.click();
+      await site.field('Quantity').fill('0');
+      await expect(site.field('Quantity')).toHaveValue('0');
     });
 
-    await test.step('<what the visitor should see>', async () => {
-      await expect(site.successDialog).toBeVisible();
-      await expect.soft(site.successTitle).toHaveText(site.labels.dialog.title);
+    await test.step('2. Click "Send request"', async () => {
+      await site.submitButton.click();
+      await expect(site.fieldError('Quantity')).toHaveText(site.labels.badges.quantity);
+      await expect(site.formStatus).toHaveText(site.labels.fix);
+      expect(sent, 'nothing is sent').toBe(0);
     });
   });
 });
 ```
-Rules:
+Code rules:
 - Import `test` and `expect` from `fixtures/monsters` (`fixtures/formsubmit-api` for API tests), never from
-  `@playwright/test`: that `expect` takes the **pass/fail screenshot of every assertion**, and the fixtures add
-  step screenshots, Desktop/Mobile labels and FormSubmit blocking.
+  `@playwright/test`: that `expect` attaches a **✓ passed / ✗ failed screenshot to every assertion**, and the
+  fixtures add step screenshots, Desktop/Mobile labels and FormSubmit blocking.
 - Locators and texts live in `pages/monsters/MonstersPage.ts` (`getByTestId`, `getByRole`; no CSS/XPath in
   specs). Add new ones there, with EN and PL texts in `LABELS`.
-- Test data from `tests/utils/testData.ts` (Faker builders, `TEST_EMAIL`). Don't hardcode names in specs.
-- `expect.soft` when one test checks several independent things; `test.step` to name phases.
+- Test data from `tests/utils/testData.ts` (Faker builders, `TEST_EMAIL`).
+- Use `expect.soft` when one step checks several independent things, so all of them are reported.
+- Loop-generated tests: each item still yields a full definition (same steps, its own data and title).
 - Never send real requests, injection strings or load to third parties (CLAUDE.md "Testing boundaries").
-- Real submissions only in opt-in tests that skip unless `SUBMIT_REAL_FORM=1`, Chromium only.
+  Real submissions only in opt-in tests that skip unless `SUBMIT_REAL_FORM=1`, Chromium only.
 
-## 5. Run it
-1. `npx playwright test <file> -g "<title>" --project=chromium` against the right site (`MONSTERS_ENV=local`
-   for unpublished changes, `live` for the published site) until it passes, or fails only because of a real
-   site bug.
-2. Run it on every browser in that folder's projects. Repeat a new test 3 times
-   (`--repeat-each=3`) to make sure it isn't flaky.
+## 5. Write the manual test case from the same definition
+Append it at the **end** of `CASES` in `Manual tests/manual-test-cases.mjs` (never in the middle: case numbers
+MT-xxx come from the position):
+
+```js
+m({
+  title: 'Quantity 0 is rejected',                       // = Title
+  area: 'Request a print > Validation',                   // = Area
+  platform: 'desktop',                                     // = Platform (desktop | mobile | smallPhone | tablet)
+  priority: 'Medium',                                      // = Priority
+  pre: M_OPEN + ' Click "Request a print".',               // = Prerequisites (+ test data where useful)
+  steps: [                                                 // = Steps and assertions, one row each
+    ['Fill in the required fields and type 0 in Quantity.', 'The field shows 0.'],
+    ['Click "Send request".', 'Quantity turns red with "Enter 1 to 10,000"; "Please check the fields marked in red."; nothing is sent.'],
+  ],
+  auto: 'monsters/e2e/form-limits.spec.ts › Quantity 0 is rejected',   // spec path under tests/ › test title
+}),
+```
+Then run `npm run manual:build`; it must say **all matched** (one manual case per automated UI test).
+
+## 6. Run it
+1. `npx playwright test <file> -g "<title>" --project=chromium` against the right site
+   (`MONSTERS_ENV=local` for unpublished changes, `live` for the published site) until it passes, or fails
+   only because of a real site bug.
+2. Run it on every project for its folder, and repeat a new test 3 times (`--repeat-each=3`) to rule out
+   flakiness. Don't pass `--reporter=...` if you want to check the Allure screenshots (it disables Allure).
 3. Only run real-submission tests when the user has asked for it (they send emails).
 
-## 6. Add the manual test case
-- Append a case at the **end** of `CASES` in `Manual tests/manual-test-cases.mjs` (never in the middle: case
-  numbers MT-xxx come from the position). Include title, area, platform, priority, preconditions, steps with
-  expected results, and `auto: '<spec file under tests/> › <test title>'` (add the describe name when the
-  title repeats in the file).
-- Run `npm run manual:build`; it must say **all matched**.
-
 ## 7. If it finds a bug
-Add an entry to `KNOWN-ISSUES.md` (next KI number, severity, steps to reproduce, expected/actual, possible fix,
-the covering test) and tell the user. Leave the test failing; don't weaken it to pass.
+Add an entry to `KNOWN-ISSUES.md` (next KI number, severity, steps to reproduce from the definition,
+expected/actual, possible fix, the covering test) and tell the user. Leave the test failing; never weaken it
+to pass.
 
 ## 8. Finish
 - Update `README.md` if a new area or command was added.
 - Commit with a clear message; ask before pushing.
-- Report: which tests were added (their titles), where, the result per browser, and any known issue logged.
+- Report to the user: the **test case definition(s)**, where the test(s) went, the result per browser, the
+  manual case number(s), and any known issue logged.
