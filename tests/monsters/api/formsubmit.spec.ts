@@ -95,6 +95,8 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
     });
 
     test('accepts a complete English request and returns the success response', { tag: ['@live-submit'] }, async ({ formApi }) => {
+      // FormSubmit can take well over 30 s to confirm (KI-012); wait for it and report the time.
+      test.setTimeout(150_000);
       const contract = await formApi.contract('en');
       const details: RequestDetails = {
         name: 'Playwright API Test',
@@ -115,7 +117,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
       await test.step('HTTP layer: 200, CORS, reasonable time, JSON body', async () => {
         expect.soft(res.status()).toBe(200);
         expect.soft(res.headers()['access-control-allow-origin']).toBeTruthy();
-        expect.soft(ms, 'response time in ms').toBeLessThan(10_000);
+        expect.soft(ms, `FormSubmit replied in ${Math.round(ms / 1000)} s (KI-012)`).toBeLessThan(15_000);
         // FormSubmit labels the reply text/html even though the body is JSON; what matters is that it parses.
         expect(json, `body is JSON (Content-Type: ${res.headers()['content-type']})`).not.toBeNull();
       });

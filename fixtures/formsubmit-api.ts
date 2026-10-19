@@ -68,7 +68,8 @@ class FormSubmitApi {
     const headers: Record<string, string> = { Accept: 'application/json', Origin: MONSTERS_URL };
     if (fromPage) headers.Referer = `${MONSTERS_URL}/`;
     const started = Date.now();
-    const res = await this.request.post(contract.action, { multipart: body, headers });
+    // Real submissions can take over 30 s to be confirmed (KI-012).
+    const res = await this.request.post(contract.action, { multipart: body, headers, timeout: 120_000 });
     const ms = Date.now() - started;
     // FormSubmit answers with a JSON body but labels it text/html, so parse the text ourselves.
     const json = await res

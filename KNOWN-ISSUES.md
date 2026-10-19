@@ -14,8 +14,9 @@ happen, and the automated tests that cover it (they fail while the bug is open).
 | [KI-007](#ki-007-no-dev-or-pull-request-preview-on-netlify) | No dev or pull request preview on Netlify | Low | Open | 2026-10-17 |
 | [KI-008](#ki-008-old-netlifyapp-address-returns-404) | Old substandard-monsters.netlify.app address returns 404 | Low | Open | 2026-10-18 |
 | [KI-009](#ki-009-https-certificate-not-valid-when-the-new-domain-went-live) | HTTPS certificate not valid when the new domain went live | High | Resolved 2026-10-18 | 2026-10-18 |
-| [KI-010](#ki-010-request-form-rejected-on-the-new-domain-formsubmit-needs-activation) | Request form rejected on the new domain: FormSubmit needs activation | **Critical** | Open | v1.6.0 |
+| [KI-010](#ki-010-request-form-rejected-on-the-new-domain-formsubmit-needs-activation) | Request form rejected on the new domain: FormSubmit needs activation | **Critical** | Resolved 2026-10-19 | v1.6.0 |
 | [KI-011](#ki-011-red-error-badges-are-hard-to-read) | Red error badges are hard to read (white on light red, 2.77:1) | Medium | Open | v1.6.0 |
+| [KI-012](#ki-012-form-can-stay-on-sending-for-over-30-seconds) | Form can stay on "Sending…" for over 30 seconds (slow FormSubmit reply, no time limit) | Medium | Open | v1.8.0 |
 
 Severity: **Critical** = a main feature doesn't work for anyone · **High** = blocks or confuses visitors · **Medium** = wrong behaviour with a workaround ·
 **Low** = cosmetic or affects few visitors.
@@ -229,7 +230,8 @@ site's certificate is invalid.
 ## KI-010: Request form rejected on the new domain: FormSubmit needs activation
 
 - **Severity:** Critical (no print requests reach the owner)
-- **Status:** Open
+- **Status:** Resolved 2026-10-19: the form is activated for the new domain; two real test requests sent on
+  2026-10-19 arrived in the owner's inbox.
 - **Found:** 2026-10-18, automated run against https://substandard-monsters.com (v1.6.0)
 - **Area:** Request a print form / FormSubmit
 
@@ -279,7 +281,33 @@ readable" (fails on every browser).
 
 ---
 
+## KI-012: Form can stay on "Sending…" for over 30 seconds
+
+- **Severity:** Medium (visitors may think it's broken, leave, or send again and create duplicates)
+- **Status:** Open
+- **Found:** 2026-10-19, real-submission tests against https://substandard-monsters.com (v1.8.0)
+- **Area:** Request a print form / FormSubmit
+
+**What happened:** two real test requests (browser and direct) were sent. FormSubmit delivered both emails,
+but did not confirm either request within 30 seconds, so the tests timed out and the page showed "Sending…"
+the whole time. FormSubmit's form address itself answered other requests in under half a second, so the
+delay is in FormSubmit processing submissions (possibly slower after several automated test submissions).
+
+**Expected:** a confirmation within a few seconds; if it takes too long, a clear message.
+**Actual:** "Sending…" with a disabled button for as long as FormSubmit takes. `script.js` has no time limit
+on the request, so if FormSubmit never answers, the page never recovers.
+
+**Possible fix:** give the request a time limit in `script.js` (e.g. `AbortSignal.timeout(20000)` on the
+`fetch`) and then show a friendlier message such as "This is taking longer than usual: your request may
+still arrive. Please wait a few minutes before sending it again."
+
+**Automated tests:** `tests/monsters/e2e/real-submit.spec.ts` and the successful-submission test in
+`tests/monsters/api/formsubmit.spec.ts` now wait up to 2 minutes, pass when FormSubmit confirms, and
+separately flag a reply slower than 15 seconds.
+
+---
+
 ## Adding an issue
 
-Copy a section above, give it the next ID (KI-012, …), add it to the table, and link the tests that cover
+Copy a section above, give it the next ID (KI-013, …), add it to the table, and link the tests that cover
 it. When an issue is fixed, set its status to **Fixed in vX.Y.Z** and keep it in the list for history.

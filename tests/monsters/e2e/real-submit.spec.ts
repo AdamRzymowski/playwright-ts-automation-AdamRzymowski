@@ -16,6 +16,9 @@ test.describe('Real form submission', () => {
 
   test('request form really reaches FormSubmit', { tag: ['@live-submit'] }, async ({ page, site }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Only one real email per run (Chromium)');
+    // FormSubmit can take well over 30 s to confirm (2026-10-19: emails arrived, the reply came late).
+    // Wait up to 2 minutes so a slow reply is reported as slow, not as "never arrived".
+    test.setTimeout(150_000);
     await allure.epic('Substandard Monsters');
     await allure.feature('Request a print');
     await allure.story('Real submission');
@@ -34,9 +37,12 @@ test.describe('Real form submission', () => {
 
     await site.goto('#contact');
     await site.fillRequest(request);
-    const responsePromise = page.waitForResponse(FORMSUBMIT);
+    const started = Date.now();
+    const responsePromise = page.waitForResponse(FORMSUBMIT, { timeout: 120_000 });
     await site.submitButton.click();
     const response = await responsePromise;
+    const ms = Date.now() - started;
+    await allure.parameter('FormSubmit reply time (ms)', String(ms));
     const body = await response.json().catch(() => ({}));
     const sent = response.request();
     await allure.attachment(
@@ -57,6 +63,8 @@ test.describe('Real form submission', () => {
 
     await test.step('Backend response', async () => {
       expect.soft(response.status(), 'FormSubmit HTTP status').toBe(200);
+      // Visitors watch "Sending…" this whole time; flag slow replies (KNOWN-ISSUES KI-012) without hiding success.
+      expect.soft(ms, `FormSubmit replied in ${Math.round(ms / 1000)} s; visitors wait on "Sending…" that long`).toBeLessThan(15_000);
       // FormSubmit labels its JSON reply text/html; record it instead of failing on it.
       await allure.parameter('Content-Type', response.headers()['content-type'] ?? '');
       // FormSubmit explains failures (e.g. "This form needs Activation") in body.message.
