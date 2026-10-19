@@ -191,6 +191,7 @@ Point saucedemo tests elsewhere with `BASE_URL`; Monsters tests with `MONSTERS_E
 | `npm run allure` | Build the Allure report from the last run and open it |
 | `npm run allure:generate` | Build it into `allure-report/` without opening |
 | `npm run allure:open` | Serve an already built report |
+| `npm run allure:browsers` | Open the per-browser Allure reports (start page linking each browser's report) |
 | `npm run report` | Open Playwright's built-in HTML report |
 
 The Allure report opens on a start page with four views (set up in `allurerc.mjs`): **All tests**,

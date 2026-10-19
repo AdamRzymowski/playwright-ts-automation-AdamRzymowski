@@ -376,7 +376,7 @@ for (const [name, status] of results) {
   if (pdf) console.log(`          PDF:    ${pdf}`);
 }
 if (reports.length > 1 && existsSync('allure-report/by-browser/index.html')) {
-  console.log('  All Allure reports: npx allure open allure-report/by-browser');
+  console.log('  Open all Allure reports in your browser: npm run allure:browsers');
 }
 if (testiny) console.log('  Results uploaded to Testiny (Automation tab).');
 console.log('=========================================\n');
