@@ -30,6 +30,8 @@ function valueOfLength(field: LimitedField, length: number): string {
 }
 
 const LIMITED = Object.entries(FORM_LIMITS) as [LimitedField, number][];
+/** Field names as a visitor reads them, for test titles. */
+const LABEL: Record<LimitedField, string> = { Name: 'Name', email: 'Email', 'File link': 'File link', Description: 'Description' };
 
 test.describe('Request form limits', () => {
   test.beforeEach(async ({ site }) => {
@@ -39,7 +41,7 @@ test.describe('Request form limits', () => {
     await site.goto('#contact');
   });
 
-  test('every field declares its limit', async ({ site }) => {
+  test('Form fields declare their character limits', async ({ site }) => {
     for (const [field, limit] of LIMITED) {
       await expect.soft(site.field(field), field).toHaveAttribute('maxlength', String(limit));
     }
@@ -49,7 +51,7 @@ test.describe('Request form limits', () => {
 
   for (const [field, limit] of LIMITED) {
     test.describe(`${field} (max ${limit})`, () => {
-      test('typing stops at the limit', async ({ site }) => {
+      test(`${LABEL[field]} stops accepting typing at ${limit} characters`, async ({ site }) => {
         // Fill to one below the limit, then type three more characters: only one may get in.
         await site.field(field).fill(valueOfLength(field, limit - 1));
         await site.field(field).press('End');
@@ -59,7 +61,7 @@ test.describe('Request form limits', () => {
         expect(length).toBe(limit);
       });
 
-      test('exactly the limit is accepted and sent in full', async ({ page, site }) => {
+      test(`${LABEL[field]} accepts exactly ${limit} characters`, async ({ page, site }) => {
         let sent: Record<string, string> = {};
         await page.route(FORMSUBMIT, async (route) => {
           sent = parseMultipart(route.request().postDataBuffer());
@@ -76,7 +78,7 @@ test.describe('Request form limits', () => {
         expect(sent[field], `${field} sent unchanged`).toBe(value);
       });
 
-      test('over the limit (autofill or script) is blocked with a badge', async ({ page, site }) => {
+      test(`${LABEL[field]} over ${limit} characters is blocked`, async ({ page, site }) => {
         await allure.description(
           'Typing cannot pass the limit, but autofill, a password manager or a script can put in longer text. ' +
             'The site then shows "Max. N characters" in the field and does not send.',
@@ -101,7 +103,7 @@ test.describe('Request form limits', () => {
 
   test.describe('Quantity range', () => {
     for (const ok of [QUANTITY_RANGE.min, QUANTITY_RANGE.max]) {
-      test(`${ok} is accepted`, async ({ page, site }) => {
+      test(`Quantity ${ok} is accepted`, async ({ page, site }) => {
         let sent: Record<string, string> = {};
         await page.route(FORMSUBMIT, async (route) => {
           sent = parseMultipart(route.request().postDataBuffer());
@@ -116,7 +118,7 @@ test.describe('Request form limits', () => {
     }
 
     for (const bad of ['0', '-1', String(QUANTITY_RANGE.max + 1), '2.5']) {
-      test(`${bad} is rejected`, async ({ page, site }) => {
+      test(`Quantity ${bad} is rejected`, async ({ page, site }) => {
         let calls = 0;
         await page.route(FORMSUBMIT, (route) => {
           calls++;
@@ -132,7 +134,7 @@ test.describe('Request form limits', () => {
     }
   });
 
-  test('description counter shows characters used and warns near the limit', async ({ site }) => {
+  test('Description counter counts characters and warns near the limit', async ({ site }) => {
     const limit = FORM_LIMITS.Description;
     const counter = site.descriptionCounter;
 
@@ -163,7 +165,7 @@ test.describe('Request form limits', () => {
     });
   });
 
-  test('counter resets after a successful send', async ({ page, site }) => {
+  test('Description counter resets after sending', async ({ page, site }) => {
     await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
     await site.fillRequest(createPrintRequest());
     await expect(site.descriptionCounter).not.toHaveText(`0 / ${FORM_LIMITS.Description}`);
@@ -174,7 +176,7 @@ test.describe('Request form limits', () => {
     await expect(site.descriptionCounter).toHaveText(`0 / ${FORM_LIMITS.Description}`);
   });
 
-  test('Polish page shows the limit message in Polish', async ({ page, sitePl }) => {
+  test('Character limit message is in Polish on the Polish page', async ({ page, sitePl }) => {
     await page.route(FORMSUBMIT, (route) => route.abort());
     await sitePl.goto('#contact');
     await sitePl.fillRequest(createPrintRequest({ service: 'Druk FDM' }));

@@ -13,7 +13,7 @@ test.describe('Mobile view', () => {
   });
 
   test.describe('Header and menu', () => {
-    test('menu is collapsed behind the hamburger button', { tag: ['@smoke'] }, async ({ site }) => {
+    test('Menu is hidden behind the hamburger button', { tag: ['@smoke'] }, async ({ site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       await site.goto();
 
@@ -23,7 +23,7 @@ test.describe('Mobile view', () => {
       await expect(site.navLink('gallery')).toBeHidden();
     });
 
-    test('tapping the hamburger opens the menu and a link closes it', async ({ page, site }) => {
+    test('Hamburger opens the menu and a link closes it', async ({ page, site }) => {
       await site.goto();
 
       await site.menuButton.tap();
@@ -38,7 +38,7 @@ test.describe('Mobile view', () => {
       await expect(site.section('gallery')).toBeInViewport();
     });
 
-    test('tapping the hamburger twice closes the menu', async ({ site }) => {
+    test('Tapping the hamburger twice closes the menu', async ({ site }) => {
       await site.goto();
 
       await site.menuButton.tap();
@@ -48,7 +48,7 @@ test.describe('Mobile view', () => {
       await expect(site.navLink('gallery')).toBeHidden();
     });
 
-    test('logo shows the icon only and the language switch fits', async ({ page, site }) => {
+    test('Logo shows only the icon and the language switch fits', async ({ page, site }) => {
       await site.goto();
 
       // At <=480 px the "Substandard Monsters" text is hidden (font-size 0) and only the icon shows.
@@ -64,7 +64,7 @@ test.describe('Mobile view', () => {
       }
     });
 
-    test('header stays at the top while scrolling', async ({ page, site }) => {
+    test('Header stays at the top while scrolling', async ({ page, site }) => {
       await site.goto();
       await site.section('how').scrollIntoViewIfNeeded();
 
@@ -76,7 +76,7 @@ test.describe('Mobile view', () => {
 
   test.describe('Layout', () => {
     for (const lang of ['en', 'pl'] as const) {
-      test(`no sideways scrolling (${lang})`, async ({ page, site, sitePl }) => {
+      test(`Page has no sideways scrolling (${lang})`, async ({ page, site, sitePl }) => {
         const s: MonstersPage = lang === 'en' ? site : sitePl;
         await s.goto();
 
@@ -88,7 +88,7 @@ test.describe('Mobile view', () => {
       });
     }
 
-    test('service cards stack in one full-width column', async ({ page, site }) => {
+    test('Service cards stack in one full-width column', async ({ page, site }) => {
       await site.goto('#services');
       const count = await site.serviceCards.count();
       const boxes = await site.boxes(Array.from({ length: count }, (_, i) => `a.service:nth-of-type(${i + 1})`));
@@ -101,7 +101,7 @@ test.describe('Mobile view', () => {
       expect.soft(boxes[0]!.width).toBeGreaterThan(width * 0.8);
     });
 
-    test('hero buttons are visible and tappable', async ({ site }) => {
+    test('Hero buttons are visible and easy to tap', async ({ site }) => {
       await site.goto();
 
       const count = await site.heroButtons.count();
@@ -114,7 +114,7 @@ test.describe('Mobile view', () => {
       }
     });
 
-    test('gallery photos fit the screen in one column', async ({ page, site }) => {
+    test('Gallery photos fit the screen in one column', async ({ page, site }) => {
       await site.goto('#gallery');
       // Needs at least two photos to compare; Miniatures has many, Resin may hold only one.
       await site.tab('painting').tap();
@@ -136,7 +136,7 @@ test.describe('Mobile view', () => {
       await allure.story('Mobile form');
     });
 
-    test('contact text sits above the form and fields stack full width', { tag: ['@smoke'] }, async ({ page, site }) => {
+    test('Form sits below the contact text with full-width fields', { tag: ['@smoke'] }, async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       await site.goto('#contact');
       const width = page.viewportSize()!.width;
@@ -160,14 +160,14 @@ test.describe('Mobile view', () => {
       }
     });
 
-    test('fields use phone-friendly keyboards', async ({ site }) => {
+    test('Form fields open phone-friendly keyboards', async ({ site }) => {
       await site.goto('#contact');
 
       await expect.soft(site.field('email')).toHaveAttribute('type', 'email');
       await expect.soft(site.field('Quantity')).toHaveAttribute('type', 'number');
     });
 
-    test('a request can be filled and sent with taps', async ({ page, site }) => {
+    test('Request can be filled in and sent with taps', async ({ page, site }) => {
       await allure.severity(allure.Severity.BLOCKER);
       await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
       await site.goto();
@@ -188,7 +188,7 @@ test.describe('Mobile view', () => {
       await expect(site.formStatus).toBeInViewport();
     });
 
-    test('validation messages show on a phone', async ({ page, site }) => {
+    test('Validation badges show on a phone', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.abort());
       await site.goto('#contact');
 
@@ -202,7 +202,7 @@ test.describe('Mobile view', () => {
     });
   });
 
-  test('gallery tabs and lightbox work with taps', async ({ page, site }) => {
+  test('Gallery tabs and enlarged photo work with taps', async ({ page, site }) => {
     await site.goto('#gallery');
 
     await site.tab('painting').tap();
@@ -222,13 +222,13 @@ test.describe('Mobile view', () => {
 
   test.describe('Other screen sizes', () => {
     for (const size of [
-      { name: 'small phone', width: 360, height: 740 },
-      { name: 'tablet', width: 768, height: 1024 },
+      { name: 'Small phone', width: 360, height: 740 },
+      { name: 'Tablet', width: 768, height: 1024 },
     ]) {
       test.describe(size.name, () => {
         test.use({ viewport: { width: size.width, height: size.height } });
 
-        test(`${size.name} (${size.width}px): no sideways scroll, hamburger menu, single-column form`, async ({ page, site }) => {
+        test(`${size.name} (${size.width}px) layout has no sideways scroll and a single-column form`, async ({ page, site }) => {
           await site.goto('#contact');
 
           const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);

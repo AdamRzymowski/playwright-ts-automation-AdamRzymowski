@@ -18,27 +18,27 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       await allure.story('axe-core scan');
     });
 
-    test('English page', { tag: ['@smoke'] }, async ({ page, site }) => {
+    test('English page has no WCAG violations', { tag: ['@smoke'] }, async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       await site.goto();
       const violations = await scanWcag(page, 'English page');
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Polish page', async ({ page, sitePl }) => {
+    test('Polish page has no WCAG violations', async ({ page, sitePl }) => {
       await sitePl.goto();
       const violations = await scanWcag(page, 'Polish page');
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Painting gallery with sub-tabs open', async ({ page, site }) => {
+    test('Miniatures and Terrain gallery has no WCAG violations', async ({ page, site }) => {
       await site.goto('#gallery');
       await site.tab('painting').click();
       const violations = await scanWcag(page, 'painting gallery', { include: '[data-testid="gallery"]' });
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Lightbox open', async ({ page, site }) => {
+    test('Enlarged photo view has no WCAG violations', async ({ page, site }) => {
       await site.goto('#gallery');
       await site.visibleGallery().locator('.gallery-item').first().click();
       await expect(site.lightbox).toBeVisible();
@@ -46,7 +46,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Request form showing an error message', async ({ page, site }) => {
+    test('Form error state has no WCAG violations', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'false', message: 'Test error' } }));
       await site.goto('#contact');
       await site.fillRequest(createPrintRequest());
@@ -56,7 +56,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
     });
 
-    test('Request form showing the thank-you message', async ({ page, site }) => {
+    test('Form success state has no WCAG violations', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
       await site.goto('#contact');
       await site.fillRequest(createPrintRequest());
@@ -72,14 +72,14 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       await allure.story('Keyboard and screen reader');
     });
 
-    test('page declares its language (WCAG 3.1.1)', async ({ page, site, sitePl }) => {
+    test('Pages declare their language', async ({ page, site, sitePl }) => {
       await site.goto();
       await expect.soft(page.locator('html')).toHaveAttribute('lang', 'en');
       await sitePl.goto();
       await expect.soft(page.locator('html')).toHaveAttribute('lang', 'pl');
     });
 
-    test('every form field has a label a screen reader announces (WCAG 1.3.1, 4.1.2)', async ({ page, site }) => {
+    test('Form fields have screen reader labels', async ({ page, site }) => {
       await site.goto('#contact');
       const labels: Record<string, RegExp> = {
         'form-name': /Your name/,
@@ -94,7 +94,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       }
     });
 
-    test('the form can be filled and sent with the keyboard only (WCAG 2.1.1)', async ({ page, site }) => {
+    test('Form can be completed with the keyboard only', async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
       await site.goto('#contact');
@@ -122,7 +122,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       await expect(site.formStatus).toHaveText(site.labels.ok);
     });
 
-    test('focused elements show a visible focus outline (WCAG 2.4.7)', async ({ page, site }) => {
+    test('Focused fields show a visible outline', async ({ page, site }) => {
       await site.goto('#contact');
       await site.field('Name').focus();
       await page.keyboard.press('Tab');
@@ -135,14 +135,14 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       expect(outline.width).toBeGreaterThan(0);
     });
 
-    test('gallery tabs can be used with the keyboard (WCAG 2.1.1)', async ({ page, site }) => {
+    test('Gallery tabs work with the keyboard', async ({ page, site }) => {
       await site.goto('#gallery');
       await site.tab('fdm').focus();
       await page.keyboard.press('Enter');
       await expect(site.visibleGallery()).toHaveAttribute('data-gallery', 'fdm');
     });
 
-    test('gallery photos can be opened with the keyboard (WCAG 2.1.1)', async ({ page, site }) => {
+    test('Gallery photos open with the keyboard', async ({ page, site }) => {
       await allure.description(
         'A keyboard-only visitor must be able to open the enlarged photo. The photos are <figure> elements ' +
           'with a click handler, so they need tabindex="0" (or a <button>) and an Enter/Space handler.',
@@ -159,7 +159,7 @@ test.describe('Accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
       await expect(site.lightbox).toBeVisible();
     });
 
-    test('lightbox closes with Escape and has a labelled close button', async ({ page, site }) => {
+    test('Enlarged photo closes with Escape and has a labelled close button', async ({ page, site }) => {
       await site.goto('#gallery');
       await site.visibleGallery().locator('.gallery-item').first().click();
 

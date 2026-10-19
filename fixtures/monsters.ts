@@ -1,4 +1,4 @@
-import { test as base, setActivePage, withStepScreenshots } from './base';
+import { test as base, flushAssertionScreenshots, setActivePage, withStepScreenshots } from './base';
 import { MonstersPage } from '../pages/monsters/MonstersPage';
 import { MONSTERS_URL } from '../sites';
 
@@ -33,6 +33,7 @@ export const test = withStepScreenshots(
         if (!allowRealEmails) await page.route(FORMSUBMIT, (route) => route.abort('blockedbyclient'));
         setActivePage(page);
         await use();
+        await flushAssertionScreenshots();
         setActivePage(undefined);
       },
       { auto: true },
@@ -43,4 +44,5 @@ export const test = withStepScreenshots(
   }),
 );
 
-export { expect } from '@playwright/test';
+/** expect with a pass/fail screenshot after every assertion (fixtures/base.ts). */
+export { expect } from './base';

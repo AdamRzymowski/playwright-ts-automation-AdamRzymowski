@@ -36,18 +36,18 @@ test.describe('Text colour contrast (readability)', () => {
     await allure.feature('Readability');
   });
 
-  test('English page: all text is readable', { tag: ['@smoke'] }, async ({ page, site }) => {
+  test('English page text has enough contrast', { tag: ['@smoke'] }, async ({ page, site }) => {
     await allure.severity(allure.Severity.CRITICAL);
     await site.goto();
     await checkContrast(page, 'English page');
   });
 
-  test('Polish page: all text is readable', async ({ page, sitePl }) => {
+  test('Polish page text has enough contrast', async ({ page, sitePl }) => {
     await sitePl.goto();
     await checkContrast(page, 'Polish page');
   });
 
-  test('open menu is readable', async ({ page, site }) => {
+  test('Open menu text has enough contrast', async ({ page, site }) => {
     await site.goto();
     await site.openMenuIfCollapsed();
     await expect(site.navLink('gallery')).toBeVisible();
@@ -55,14 +55,14 @@ test.describe('Text colour contrast (readability)', () => {
   });
 
   for (const tab of ['resin', 'fdm', 'design', 'painting'] as const) {
-    test(`gallery tab "${tab}" and captions are readable`, async ({ page, site }) => {
+    test(`Gallery "${tab}" tab and captions have enough contrast`, async ({ page, site }) => {
       await site.goto('#gallery');
       await site.tab(tab).click();
       await checkContrast(page, `gallery ${tab}`, '[data-testid="gallery"]');
     });
   }
 
-  test('enlarged photo caption is readable', async ({ page, site }) => {
+  test('Enlarged photo caption has enough contrast', async ({ page, site }) => {
     await site.goto('#gallery');
     await site.tab('painting').click();
     await site.visibleGallery().locator('.gallery-item').first().click();
@@ -70,7 +70,7 @@ test.describe('Text colour contrast (readability)', () => {
     await checkContrast(page, 'lightbox', '[data-testid="lightbox"]');
   });
 
-  test('form error badges and the red message are readable', async ({ page, site }) => {
+  test('Form error badges and message have enough contrast', async ({ page, site }) => {
     await allure.severity(allure.Severity.CRITICAL);
     await page.route(FORMSUBMIT, (route) => route.abort());
     await site.goto('#contact');
@@ -80,7 +80,7 @@ test.describe('Text colour contrast (readability)', () => {
     await checkContrast(page, 'form with error badges', '[data-testid="request-form"]');
   });
 
-  test('form "Sending…" and thank-you messages are readable', async ({ page, site }) => {
+  test('Form sending and thank-you messages have enough contrast', async ({ page, site }) => {
     let release!: () => void;
     const held = new Promise<void>((r) => (release = r));
     await page.route(FORMSUBMIT, async (route) => {
@@ -103,7 +103,7 @@ test.describe('Text colour contrast (readability)', () => {
     });
   });
 
-  test('description counter warning is readable', async ({ page, site }) => {
+  test('Description counter warning has enough contrast', async ({ page, site }) => {
     await site.goto('#contact');
     await site.field('Description').fill('x'.repeat(950));
     await expect(site.descriptionCounter).toHaveClass(/near-limit/);

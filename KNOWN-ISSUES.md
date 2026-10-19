@@ -114,8 +114,8 @@ email could run code if the owner clicks it in some mail clients.
 `/^https?:\/\/[^\s/$.?#].[^\s]*$/i`, with a badge such as "Enter a link starting with https://", and a
 Polish version for pl.html.
 
-**Automated tests:** `tests/monsters/e2e/file-link.spec.ts`, the 6 "flags a malformed link" tests (failing
-until fixed). The "accepts a … link" tests check that real links keep working.
+**Automated tests:** `tests/monsters/e2e/file-link.spec.ts`, the 6 "File link rejects …" tests (passing since
+v1.6.1). The "File link accepts …" tests check that real links keep working.
 
 ---
 
@@ -143,8 +143,7 @@ The photos are `<figure>` elements with only a click handler, so they can't be r
 with Enter (WCAG 2.1.1). **Fix:** add `tabindex="0"` and `role="button"` to each photo and open the
 lightbox on Enter/Space too, or wrap each photo in a `<button>`.
 
-**Automated tests:** `tests/monsters/e2e/accessibility.spec.ts`, "gallery photos can be opened with the
-keyboard".
+**Automated tests:** `tests/monsters/e2e/accessibility.spec.ts`, "Gallery photos open with the keyboard".
 
 ---
 
@@ -252,7 +251,7 @@ form for FormSubmit, so every submission is rejected until it is activated.
 the link, then send one test request. Consider switching the action to the FormSubmit alias at the same time
 (KI-006).
 
-**Automated tests:** `tests/monsters/e2e/real-submit.spec.ts` and the "Successful submission" tests in
+**Automated tests:** `tests/monsters/e2e/real-submit.spec.ts` and the "Complete request is accepted with a success response" test in
 `tests/monsters/api/formsubmit.spec.ts` (opt-in, `SUBMIT_REAL_FORM=1`); both failed with this message.
 The everyday form tests fake FormSubmit's reply, so they could not catch it: run the opt-in tests after any
 domain or hosting change.
@@ -276,8 +275,8 @@ may not be able to read why their request was not sent.
 **Possible fix:** dark text on the light red (e.g. `color: #2b0000` gives about 8:1), or a darker red
 background with white text (e.g. `#c62828` gives about 5.6:1).
 
-**Automated tests:** `tests/monsters/e2e/contrast.spec.ts`, "form error badges and the red message are
-readable" (fails on every browser).
+**Automated tests:** `tests/monsters/e2e/contrast.spec.ts`, "Form error badges and message have enough
+contrast" (fails on every browser).
 
 ---
 

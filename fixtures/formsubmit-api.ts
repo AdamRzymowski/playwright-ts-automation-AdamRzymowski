@@ -85,4 +85,5 @@ export const test = base.extend<{ formApi: FormSubmitApi }>({
   formApi: async ({ request }, use) => use(new FormSubmitApi(request)),
 });
 
-export { expect } from '@playwright/test';
+/** Same expect as the browser tests; API tests have no page, so no screenshots are taken. */
+export { expect } from './base';

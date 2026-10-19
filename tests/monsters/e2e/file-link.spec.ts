@@ -10,24 +10,24 @@ import { parseMultipart } from '../../utils/multipart';
 // (Up to v1.6.0 any text was accepted: KNOWN-ISSUES.md KI-003.)
 
 const VALID_LINKS = {
-  Thingiverse: 'https://www.thingiverse.com/thing:2187167',
-  Printables: 'https://www.printables.com/model/3161-3d-benchy',
-  'Google Drive (with query)': 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing',
-  'Dropbox (with ?dl=0)': 'https://www.dropbox.com/scl/fi/abc123/dragon.stl?rlkey=xyz789&dl=0',
-  'with a #section': 'https://www.myminifactory.com/object/3d-print-dragon-12345#comments',
-  'http (not https)': 'http://example.com/models/dragon.3mf',
-  'encoded space': 'https://example.com/my%20files/dragon%20v2.stl',
-  'without https://': 'drive.google.com/file/d/1AbCdEf/view',
+  'a Thingiverse link': 'https://www.thingiverse.com/thing:2187167',
+  'a Printables link': 'https://www.printables.com/model/3161-3d-benchy',
+  'a Google Drive link with a query': 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing',
+  'a Dropbox link with ?dl=0': 'https://www.dropbox.com/scl/fi/abc123/dragon.stl?rlkey=xyz789&dl=0',
+  'a link with a #section': 'https://www.myminifactory.com/object/3d-print-dragon-12345#comments',
+  'an http link': 'http://example.com/models/dragon.3mf',
+  'a link with an encoded space': 'https://example.com/my%20files/dragon%20v2.stl',
+  'a link without https://': 'drive.google.com/file/d/1AbCdEf/view',
   'two links': 'https://www.thingiverse.com/thing:2187167, https://www.printables.com/model/3161-3d-benchy',
 };
 
 const MALFORMED_LINKS = {
   'plain text': 'my dragon file',
-  'typo in http': 'htp://www.thingiverse.com/thing:123',
-  'scheme only': 'https://',
-  'javascript link': 'javascript:alert(document.cookie)',
+  'a typo in http': 'htp://www.thingiverse.com/thing:123',
+  'a scheme with no address': 'https://',
+  'a javascript: link': 'javascript:alert(document.cookie)',
   'missing slashes': 'https:www.printables.com/model/1',
-  'spaces inside': 'https://www.printables.com/model/1 2 3',
+  'spaces inside a link': 'https://www.printables.com/model/1 2 3',
 };
 
 test.describe('Request form: file link format', () => {
@@ -38,7 +38,7 @@ test.describe('Request form: file link format', () => {
     await site.goto('#contact');
   });
 
-  test('field is optional and has a helpful placeholder', async ({ page, site }) => {
+  test('File link field is optional with a helpful placeholder', async ({ page, site }) => {
     await expect(site.field('File link')).not.toHaveAttribute('required');
     await expect(site.field('File link')).toHaveAttribute('placeholder', /Thingiverse|Printables|Drive|Dropbox/);
 
@@ -55,7 +55,7 @@ test.describe('Request form: file link format', () => {
   });
 
   for (const [kind, link] of Object.entries(VALID_LINKS)) {
-    test(`accepts a ${kind} link and sends it unchanged`, async ({ page, site }) => {
+    test(`File link accepts ${kind} unchanged`, async ({ page, site }) => {
       let sent: Record<string, string> = {};
       await page.route(FORMSUBMIT, async (route) => {
         sent = parseMultipart(route.request().postDataBuffer());
@@ -76,7 +76,7 @@ test.describe('Request form: file link format', () => {
   }
 
   for (const [kind, link] of Object.entries(MALFORMED_LINKS)) {
-    test(`flags a malformed link: ${kind}`, async ({ page, site }) => {
+    test(`File link rejects ${kind}`, async ({ page, site }) => {
       await allure.description(
         'The form marks the link field with "Enter a valid link" and does not send (fixed in v1.6.1, KI-003).',
       );

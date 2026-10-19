@@ -11,14 +11,14 @@ test.describe('Mobile accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
     await allure.story('Mobile');
   });
 
-  test('mobile page has no WCAG violations', { tag: ['@smoke'] }, async ({ page, site }) => {
+  test('Phone view has no WCAG violations', { tag: ['@smoke'] }, async ({ page, site }) => {
     await allure.severity(allure.Severity.CRITICAL);
     await site.goto();
     const violations = await scanWcag(page, 'mobile page');
     expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
   });
 
-  test('open mobile menu has no WCAG violations', async ({ page, site }) => {
+  test('Open phone menu has no WCAG violations', async ({ page, site }) => {
     await site.goto();
     await site.menuButton.tap();
     await expect(site.navLink('gallery')).toBeVisible();
@@ -26,7 +26,7 @@ test.describe('Mobile accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
     expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
   });
 
-  test('menu button tells screen readers whether it is open (WCAG 4.1.2)', async ({ site }) => {
+  test('Menu button tells screen readers if it is open', async ({ site }) => {
     await site.goto();
     await expect(site.menuButton).toHaveAccessibleName(site.labels.menuButton);
     await expect(site.menuButton).toHaveAttribute('aria-expanded', 'false');
@@ -34,14 +34,14 @@ test.describe('Mobile accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
     await expect(site.menuButton).toHaveAttribute('aria-expanded', 'true');
   });
 
-  test('pinch-zoom is allowed (WCAG 1.4.4)', async ({ page, site }) => {
+  test('Pinch-zoom is allowed', async ({ page, site }) => {
     await site.goto();
     const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
     expect(viewport).not.toMatch(/user-scalable\s*=\s*(no|0)/);
     expect(viewport).not.toMatch(/maximum-scale\s*=\s*1(\.0)?\b/);
   });
 
-  test('buttons and links are big enough to tap (WCAG 2.5.8, 24x24 px)', async ({ page, site }) => {
+  test('Buttons and links are big enough to tap', async ({ page, site }) => {
     await site.goto();
     await site.menuButton.tap();
 

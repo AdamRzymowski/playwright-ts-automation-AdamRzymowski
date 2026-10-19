@@ -10,7 +10,7 @@ test.describe('Gallery', () => {
     await allure.feature('Gallery');
   });
 
-  test('resin gallery is shown by default', async ({ site }) => {
+  test('Resin gallery is shown by default', async ({ site }) => {
     await site.goto();
 
     await expect(site.tab('resin')).toHaveClass(/\bactive\b/);
@@ -19,7 +19,7 @@ test.describe('Gallery', () => {
     await expect(site.subtabRow).toBeHidden();
   });
 
-  test('each tab shows only its own gallery', { tag: ['@smoke'] }, async ({ site }) => {
+  test('Each gallery tab shows only its own photos', { tag: ['@smoke'] }, async ({ site }) => {
     await allure.severity(allure.Severity.CRITICAL);
     await site.goto();
 
@@ -34,7 +34,7 @@ test.describe('Gallery', () => {
     }
   });
 
-  test('painting tab opens sub-tabs and remembers the last one', async ({ site }) => {
+  test('Miniatures and Terrain tab remembers the last sub-tab', async ({ site }) => {
     await site.goto();
 
     await test.step('painting opens Miniatures first', async () => {
@@ -60,7 +60,7 @@ test.describe('Gallery', () => {
   });
 
   for (const name of ['resin', 'fdm', 'design', 'painting'] as GalleryName[]) {
-    test(`service card "${name}" opens its gallery`, async ({ page, site }) => {
+    test(`Service card "${name}" opens its gallery`, async ({ page, site }) => {
       await site.goto();
       await site.serviceCard(name).click();
 
@@ -71,7 +71,7 @@ test.describe('Gallery', () => {
     });
   }
 
-  test('deep link #gallery-fdm opens the FDM gallery', async ({ site }) => {
+  test('Link to #gallery-fdm opens the FDM gallery', async ({ site }) => {
     await site.goto('#gallery-fdm');
 
     await expect(site.tab('fdm')).toHaveClass(/\bactive\b/);
@@ -79,7 +79,7 @@ test.describe('Gallery', () => {
     await expect(site.section('gallery')).toBeInViewport();
   });
 
-  test('every photo has alt text and a caption', async ({ site }) => {
+  test('Every gallery photo has alt text and a caption', async ({ site }) => {
     await site.goto();
     const items = site.page.locator('.gallery-item');
     const count = await items.count();
@@ -97,7 +97,7 @@ test.describe('Gallery', () => {
       await allure.story('Lightbox');
     });
 
-    test('opens the clicked photo with its caption', async ({ site }) => {
+    test('Clicking a photo enlarges it with its caption', async ({ site }) => {
       // Miniatures has many photos; the default Resin gallery may hold only one.
       await site.goto('#gallery');
       await site.tab('painting').click();
@@ -112,7 +112,7 @@ test.describe('Gallery', () => {
       await expect(site.lightboxCaption).toHaveText(caption!);
     });
 
-    test('closes with Escape, the close button and the backdrop, but not the photo', async ({ page, site }) => {
+    test('Enlarged photo closes with Escape, × or backdrop', async ({ page, site }) => {
       await site.goto();
       const first = site.gallery('resin').locator('.gallery-item').first();
 

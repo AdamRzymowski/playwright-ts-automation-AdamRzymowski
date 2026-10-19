@@ -13,7 +13,7 @@ test.describe('Request form', () => {
     await site.goto('#contact');
   });
 
-  test('shows every field, the required note and an empty status', async ({ site }) => {
+  test('Form shows all fields, the required note and no message', async ({ site }) => {
     await allure.severity(allure.Severity.CRITICAL);
 
     for (const field of ['Name', 'email', 'Service', 'Quantity', 'File link', 'Description'] as FormField[]) {
@@ -34,7 +34,7 @@ test.describe('Request form', () => {
     await expect.soft(site.formStatus).toBeEmpty();
   });
 
-  test('sends every field and shows a thank-you message', { tag: ['@smoke'] }, async ({ page, site }) => {
+  test('Complete request sends every field and thanks the visitor', { tag: ['@smoke'] }, async ({ page, site }) => {
     await allure.severity(allure.Severity.BLOCKER);
     const request = createPrintRequest();
     await allure.attachment('request.json', JSON.stringify(request, null, 2), 'application/json');
@@ -73,7 +73,7 @@ test.describe('Request form', () => {
     });
   });
 
-  test('sends with only the required fields filled', async ({ page, site }) => {
+  test('Request with only required fields is sent', async ({ page, site }) => {
     let sent: Record<string, string> = {};
     await page.route(FORMSUBMIT, async (route) => {
       sent = parseMultipart(route.request().postDataBuffer());
@@ -92,7 +92,7 @@ test.describe('Request form', () => {
     expect.soft(sent['File link']).toBe('');
   });
 
-  test('posts to the FormSubmit address in the form', async ({ page, site }) => {
+  test('Form posts to its FormSubmit address', async ({ page, site }) => {
     await allure.severity(allure.Severity.BLOCKER);
     const action = await site.form.getAttribute('action');
     expect(action).toMatch(/^https:\/\/formsubmit\.co\/ajax\/\S+/);
@@ -117,7 +117,7 @@ test.describe('Request form', () => {
     // v1.6.0+: the site checks the fields itself and shows a red badge in each problem field,
     // plus "Please check the fields marked in red." under the button. Nothing is sent.
 
-    test('required fields block sending', async ({ page, site }) => {
+    test('Empty required fields block sending', async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       let calls = 0;
       await page.route(FORMSUBMIT, (route) => {
@@ -143,7 +143,7 @@ test.describe('Request form', () => {
     });
 
     for (const missing of ['Name', 'email', 'Service', 'Description'] as FormField[]) {
-      test(`missing ${missing} alone blocks sending`, async ({ page, site }) => {
+      test(`Missing ${missing} alone blocks sending`, async ({ page, site }) => {
         let calls = 0;
         await page.route(FORMSUBMIT, (route) => {
           calls++;
@@ -165,7 +165,7 @@ test.describe('Request form', () => {
       });
     }
 
-    test('rejects an invalid email address', async ({ page, site }) => {
+    test('Invalid email address is rejected', async ({ page, site }) => {
       let calls = 0;
       await page.route(FORMSUBMIT, (route) => {
         calls++;
@@ -179,7 +179,7 @@ test.describe('Request form', () => {
       expect(calls).toBe(0);
     });
 
-    test('quantity below 1 is rejected', async ({ page, site }) => {
+    test('Quantity below 1 is rejected', async ({ page, site }) => {
       let calls = 0;
       await page.route(FORMSUBMIT, (route) => {
         calls++;
@@ -193,7 +193,7 @@ test.describe('Request form', () => {
       expect(calls).toBe(0);
     });
 
-    test('a fixed field clears its badge while typing', async ({ page, site }) => {
+    test('Error badge clears once the field is fixed', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.abort());
       await site.submitButton.click();
       await expect(site.fieldError('Name')).toBeVisible();
@@ -204,7 +204,7 @@ test.describe('Request form', () => {
       await expect(site.field('Name')).toHaveAttribute('aria-invalid', 'false');
     });
 
-    test('description needs at least 5 words', { tag: ['@smoke'] }, async ({ page, site }) => {
+    test('Description needs at least 5 words', { tag: ['@smoke'] }, async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       let calls = 0;
       await page.route(FORMSUBMIT, (route) => {
@@ -235,7 +235,7 @@ test.describe('Request form', () => {
       });
     });
 
-    test('hidden spam trap stays empty and out of reach', async ({ site }) => {
+    test('Hidden spam trap stays empty and unreachable', async ({ site }) => {
       const honey = site.form.locator('input[name="_honey"]');
       await expect(honey).toBeHidden();
       await expect(honey).toHaveAttribute('tabindex', '-1');
@@ -248,7 +248,7 @@ test.describe('Request form', () => {
       await allure.story('Sending and errors');
     });
 
-    test('shows the "Sending…" state while waiting', async ({ page, site }) => {
+    test('Form shows "Sending…" while waiting', async ({ page, site }) => {
       let release!: () => void;
       const held = new Promise<void>((r) => (release = r));
       await page.route(FORMSUBMIT, async (route) => {
@@ -265,7 +265,7 @@ test.describe('Request form', () => {
       await expect(site.formStatus).toHaveText(site.labels.ok);
     });
 
-    test('shows FormSubmit\'s reason when it rejects the request', async ({ page, site }) => {
+    test("Form shows FormSubmit's reason for a rejection", async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       await page.route(FORMSUBMIT, (route) =>
         route.fulfill({ json: { success: 'false', message: 'This form needs Activation.' } }),
@@ -282,7 +282,7 @@ test.describe('Request form', () => {
       await expect(site.field('Description')).toHaveValue(request.description);
     });
 
-    test('shows an error when the network fails', async ({ page, site }) => {
+    test('Form shows an error when the network fails', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.abort('internetdisconnected'));
 
       await site.fillRequest(createPrintRequest());
@@ -294,7 +294,7 @@ test.describe('Request form', () => {
       await expect(site.submitButton).toBeEnabled();
     });
 
-    test('shows an error when FormSubmit returns a broken reply', async ({ page, site }) => {
+    test('Form shows an error for a broken reply', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.fulfill({ status: 500, body: '<html>Server error</html>' }));
 
       await site.fillRequest(createPrintRequest());
@@ -304,7 +304,7 @@ test.describe('Request form', () => {
       await expect(site.submitButton).toBeEnabled();
     });
 
-    test('can retry after an error and then succeed', async ({ page, site }) => {
+    test('Form can be resent after an error', async ({ page, site }) => {
       let attempt = 0;
       await page.route(FORMSUBMIT, (route) => {
         attempt++;
@@ -322,12 +322,12 @@ test.describe('Request form', () => {
     });
   });
 
-  test('service dropdown lists every service', async ({ site }) => {
+  test('Service dropdown lists every service', async ({ site }) => {
     const options = await site.field('Service').locator('option:not([value=""])').allTextContents();
     expect(options).toEqual([...MONSTER_SERVICES.en]);
   });
 
-  test('"Request a print" buttons lead to the form', async ({ page, site }) => {
+  test('"Request a print" button leads to the form', async ({ page, site }) => {
     await site.goto();
     await page.getByTestId('hero-request').click();
     await expect(page).toHaveURL(/#contact$/);

@@ -11,7 +11,7 @@ test.describe('Home page', () => {
     await site.goto();
   });
 
-  test('loads with title, hero and every section', { tag: ['@smoke'] }, async ({ page, site }) => {
+  test('Home page loads with title, hero and all sections', { tag: ['@smoke'] }, async ({ page, site }) => {
     await allure.severity(allure.Severity.BLOCKER);
 
     await expect(page).toHaveTitle(site.labels.title);
@@ -26,7 +26,7 @@ test.describe('Home page', () => {
   });
 
   for (const id of SECTIONS) {
-    test(`nav link scrolls to #${id}`, async ({ page, site }) => {
+    test(`Menu link scrolls to the #${id} section`, async ({ page, site }) => {
       await site.clickNav(id);
 
       await expect(page).toHaveURL(new RegExp(`#${id}$`));
@@ -34,7 +34,7 @@ test.describe('Home page', () => {
     });
   }
 
-  test('footer shows the current year and Facebook links open safely', async ({ site }) => {
+  test('Footer shows the current year and safe Facebook links', async ({ site }) => {
     await expect(site.footerYear).toHaveText(String(new Date().getFullYear()));
 
     const count = await site.facebookLinks.count();
@@ -47,12 +47,12 @@ test.describe('Home page', () => {
     }
   });
 
-  test('footer shows the site version', async ({ site }) => {
+  test('Footer shows the site version', async ({ site }) => {
     await expect(site.footerVersion).toHaveText(/^\d+\.\d+\.\d+$/);
     await allure.parameter('Site version', (await site.footerVersion.textContent()) ?? '');
   });
 
-  test('every image on the page loads', async ({ page, request }) => {
+  test('Every image on the page loads', async ({ page, request }) => {
     await allure.severity(allure.Severity.CRITICAL);
     // Downloads every photo; allow for a slow connection to the live site.
     test.slow();
@@ -68,7 +68,7 @@ test.describe('Home page', () => {
     }
   });
 
-  test('page has no JavaScript errors', async ({ page, site }) => {
+  test('Page runs without JavaScript errors', async ({ page, site }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
 

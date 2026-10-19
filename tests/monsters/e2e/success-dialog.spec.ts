@@ -22,7 +22,7 @@ test.describe('Request form: success pop-up', () => {
     await site.submitButton.click();
   }
 
-  test('appears after a successful send with the right content', { tag: ['@smoke'] }, async ({ page, site }) => {
+  test('Success pop-up appears with the right content', { tag: ['@smoke'] }, async ({ page, site }) => {
     await allure.severity(allure.Severity.CRITICAL);
     await expect(site.successDialog).toBeHidden();
 
@@ -44,7 +44,7 @@ test.describe('Request form: success pop-up', () => {
     });
   });
 
-  test('is a proper modal: focus on its button, page behind not clickable', async ({ page, site }) => {
+  test('Success pop-up takes focus and blocks the page behind', async ({ page, site }) => {
     await sendSuccessfully(page, site);
     await expect(site.successDialog).toBeVisible();
 
@@ -61,7 +61,7 @@ test.describe('Request form: success pop-up', () => {
   });
 
   for (const how of ['button', 'x', 'escape', 'backdrop'] as const) {
-    test(`closes with the ${how === 'button' ? '"Great, thanks" button' : how === 'x' ? '× button' : how === 'escape' ? 'Escape key' : 'dark backdrop'}`, async ({ page, site }) => {
+    test(`Success pop-up closes with the ${how === 'button' ? '"Great, thanks" button' : how === 'x' ? '× button' : how === 'escape' ? 'Escape key' : 'dark backdrop'}`, async ({ page, site }) => {
       await sendSuccessfully(page, site);
       await expect(site.successDialog).toBeVisible();
 
@@ -77,13 +77,13 @@ test.describe('Request form: success pop-up', () => {
     });
   }
 
-  test('stays open when clicking inside it', async ({ page, site }) => {
+  test('Success pop-up stays open when clicked inside', async ({ page, site }) => {
     await sendSuccessfully(page, site);
     await site.successText.click();
     await expect(site.successDialog).toBeVisible();
   });
 
-  test('does not appear when sending fails or the form has errors', async ({ page, site }) => {
+  test('Success pop-up does not appear on errors', async ({ page, site }) => {
     await test.step('form with errors', async () => {
       await page.route(FORMSUBMIT, (route) => route.abort());
       await site.submitButton.click();
@@ -109,7 +109,7 @@ test.describe('Request form: success pop-up', () => {
     });
   });
 
-  test('appears again for a second request', async ({ page, site }) => {
+  test('Success pop-up appears again for a second request', async ({ page, site }) => {
     await sendSuccessfully(page, site);
     await site.successClose.click();
     await expect(site.successDialog).toBeHidden();
@@ -119,7 +119,7 @@ test.describe('Request form: success pop-up', () => {
     await expect(site.successDialog).toBeVisible();
   });
 
-  test('fits on the screen and its text is readable', async ({ page, site }) => {
+  test('Success pop-up fits the screen and is readable', async ({ page, site }) => {
     await sendSuccessfully(page, site);
     await expect(site.successDialog).toBeVisible();
 
@@ -133,7 +133,7 @@ test.describe('Request form: success pop-up', () => {
     expect(results.violations.flatMap((v) => v.nodes.map((n) => n.target.join(' '))), formatViolations(results.violations)).toEqual([]);
   });
 
-  test('Polish page shows the pop-up in Polish', async ({ page, sitePl }) => {
+  test('Success pop-up is in Polish on the Polish page', async ({ page, sitePl }) => {
     await sitePl.goto('#contact');
     await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
     await sitePl.fillRequest(createPrintRequest({ service: 'Druk FDM' }));

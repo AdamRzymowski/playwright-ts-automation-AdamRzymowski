@@ -8,7 +8,7 @@ test.describe('Languages (EN / PL)', () => {
     await allure.feature('Languages');
   });
 
-  test('switches from English to Polish and back', { tag: ['@smoke'] }, async ({ page, site, sitePl }) => {
+  test('Language switch goes from English to Polish and back', { tag: ['@smoke'] }, async ({ page, site, sitePl }) => {
     await allure.severity(allure.Severity.CRITICAL);
     await site.goto();
 
@@ -35,7 +35,7 @@ test.describe('Languages (EN / PL)', () => {
     });
   });
 
-  test('Polish nav, tabs and form are translated', async ({ sitePl }) => {
+  test('Polish menu, tabs and form are translated', async ({ sitePl }) => {
     await sitePl.goto();
     const { nav, tabs } = sitePl.labels;
 
@@ -51,7 +51,7 @@ test.describe('Languages (EN / PL)', () => {
     expect.soft(options).toEqual([...MONSTER_SERVICES.pl]);
   });
 
-  test('Polish form sends in Polish and confirms in Polish', async ({ page, sitePl }) => {
+  test('Polish form sends a Polish request and confirms in Polish', async ({ page, sitePl }) => {
     let body = '';
     await page.route(FORMSUBMIT, async (route) => {
       body = route.request().postDataBuffer()?.toString('utf8') ?? '';
@@ -69,7 +69,7 @@ test.describe('Languages (EN / PL)', () => {
     expect.soft(body).toContain(sitePl.expectedSubject(request));
   });
 
-  test('Polish 5-word message is in Polish', async ({ page, sitePl }) => {
+  test('5-word rule message is in Polish on the Polish page', async ({ page, sitePl }) => {
     await page.route(FORMSUBMIT, (route) => route.abort());
     await sitePl.goto('#contact');
 
@@ -80,7 +80,7 @@ test.describe('Languages (EN / PL)', () => {
     await expect(sitePl.formStatus).toHaveText(sitePl.labels.fix);
   });
 
-  test('EN and PL pages have the same photos and services', async ({ page, site, sitePl }) => {
+  test('EN and PL pages show the same photos and services', async ({ page, site, sitePl }) => {
     await allure.description(
       'The setup guide says every change must be made in both index.html and pl.html. ' +
         'This test catches a photo or service added to only one of them.',

@@ -14,7 +14,7 @@ test.describe('Real form submission', () => {
   test.skip(!process.env.SUBMIT_REAL_FORM, 'Sends a real email - run with SUBMIT_REAL_FORM=1');
   test.use({ allowRealEmails: true });
 
-  test('request form really reaches FormSubmit', { tag: ['@live-submit'] }, async ({ page, site }, testInfo) => {
+  test('Real request reaches FormSubmit and shows success', { tag: ['@live-submit'] }, async ({ page, site }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Only one real email per run (Chromium)');
     // FormSubmit can take well over 30 s to confirm (2026-10-19: emails arrived, the reply came late).
     // Wait up to 2 minutes so a slow reply is reported as slow, not as "never arrived".

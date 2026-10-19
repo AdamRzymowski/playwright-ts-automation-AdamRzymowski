@@ -49,7 +49,7 @@ test.describe('Request form: SQL guard', () => {
   });
 
   for (const [kind, sample] of Object.entries(SQL_SAMPLES)) {
-    test(`blocks ${kind} in the description`, { tag: ['@security'] }, async ({ page, site }) => {
+    test(`SQL guard blocks ${kind} in the description`, { tag: ['@security'] }, async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       const sent = await countSends(page);
       await site.fillRequest(createPrintRequest({ description: `Please print a dragon for me. ${sample}` }));
@@ -66,7 +66,7 @@ test.describe('Request form: SQL guard', () => {
   }
 
   for (const field of ['Name', 'File link'] as FormField[]) {
-    test(`blocks SQL in the ${field} field`, { tag: ['@security'] }, async ({ page, site }) => {
+    test(`SQL guard blocks SQL in the ${field} field`, { tag: ['@security'] }, async ({ page, site }) => {
       const sent = await countSends(page);
       await site.fillRequest(createPrintRequest());
       await site.field(field).fill("x'; DROP TABLE users; --");
@@ -80,7 +80,7 @@ test.describe('Request form: SQL guard', () => {
   }
 
   for (const [kind, text] of Object.entries(NORMAL_TEXT)) {
-    test(`lets normal text through: ${kind}`, { tag: ['@security'] }, async ({ page, site }) => {
+    test(`SQL guard lets normal text through: ${kind}`, { tag: ['@security'] }, async ({ page, site }) => {
       const sent = await countSends(page);
       await site.fillRequest(createPrintRequest({ description: text }));
 
@@ -92,7 +92,7 @@ test.describe('Request form: SQL guard', () => {
     });
   }
 
-  test('warning clears once the text is fixed, then the request can be sent', async ({ page, site }) => {
+  test('SQL warning clears once the text is fixed', async ({ page, site }) => {
     const sent = await countSends(page);
     await site.fillRequest(createPrintRequest({ description: 'Please print this. SELECT * FROM users' }));
     await site.submitButton.click();
@@ -107,7 +107,7 @@ test.describe('Request form: SQL guard', () => {
     expect(sent.count).toBe(1);
   });
 
-  test('warning is shown in Polish on the Polish page', async ({ page, sitePl }) => {
+  test('SQL warning is in Polish on the Polish page', async ({ page, sitePl }) => {
     const sent = await countSends(page);
     await sitePl.goto('#contact');
     await sitePl.fillRequest(createPrintRequest({ service: 'Druk FDM', description: "Proszę wydrukować smoka. ' OR 1=1 --" }));
@@ -119,7 +119,7 @@ test.describe('Request form: SQL guard', () => {
     expect(sent.count).toBe(0);
   });
 
-  test('warning block is readable', async ({ page, site }) => {
+  test('SQL warning has enough contrast', async ({ page, site }) => {
     await countSends(page);
     await site.fillRequest(createPrintRequest({ description: 'Please print this. UNION SELECT password FROM users' }));
     await site.submitButton.click();

@@ -11,7 +11,7 @@ test.describe('Facebook links', () => {
   });
 
   for (const lang of ['en', 'pl'] as Lang[]) {
-    test(`each Facebook link opens the Facebook page in a new tab (${lang})`, { tag: ['@smoke'] }, async ({ page, site, sitePl, viewport }) => {
+    test(`Facebook links open the Facebook page in a new tab (${lang})`, { tag: ['@smoke'] }, async ({ page, site, sitePl, viewport }) => {
       // Phone-sized projects (incl. Firefox, which has no isMobile emulation).
       const isMobile = (viewport?.width ?? 1280) < 768;
       await allure.severity(allure.Severity.CRITICAL);

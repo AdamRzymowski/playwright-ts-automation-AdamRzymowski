@@ -80,8 +80,7 @@ Covered: page structure and nav, every image loads, no JavaScript errors, galler
 sub-tabs, service cards and `#gallery-...` links, lightbox, form success / validation / errors, the
 EN/PL switch and translations, EN/PL content staying in sync, the mobile menu and layout, form
 character limits and the quantity range (`form-limits.spec.ts`), text colour contrast on every page state
-(`contrast.spec.ts`), and the file link format (`file-link.spec.ts`; the "malformed link" tests fail until
-the site checks links, see KNOWN-ISSUES.md).
+(`contrast.spec.ts`), and the file link format (`file-link.spec.ts`), the success pop-up (`success-dialog.spec.ts`) and the SQL guard (`sql-guard.spec.ts`).
 
 ## Setup
 
@@ -197,6 +196,17 @@ videos, traces and attachments) and **Charts** (status, severity and trend chart
 Desktop or Mobile by `fixtures/base.ts`. Each run starts
 with empty `allure-results/`; run history is kept in `allure-history/`, so trend charts grow with every
 report you generate.
+
+## Adding tests and screenshots
+
+- **Adding a test:** Claude follows the `test-creation-template` skill (`.claude/skills/`), required by
+  CLAUDE.md: placement, a brief self-describing title, the code template, running it on every browser, the
+  matching manual case and any known issue.
+- **Titles:** every test is named with a short sentence saying what it checks, e.g. "Quantity 0 is rejected".
+- **Proof screenshots:** every assertion attaches a screenshot to the report, "✓ passed: …" or "✗ failed: …"
+  with what was checked, plus one after each named step and one at the end of each test. They're visible-
+  screen JPEGs to keep reports manageable; set `ASSERT_SCREENSHOTS=0` to skip the per-assertion ones for a quick
+  run.
 
 ## Known issues
 

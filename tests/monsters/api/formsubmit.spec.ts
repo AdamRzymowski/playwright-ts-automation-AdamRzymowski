@@ -25,7 +25,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
     });
 
     for (const lang of ['en', 'pl'] as const) {
-      test(`${lang.toUpperCase()} form posts to the FormSubmit AJAX endpoint with the right hidden fields`, async ({ formApi }) => {
+      test(`${lang.toUpperCase()} form targets FormSubmit with the correct hidden fields`, async ({ formApi }) => {
         await allure.severity(allure.Severity.BLOCKER);
         const contract = await formApi.contract(lang);
         await allure.attachment(`form-contract-${lang}.json`, JSON.stringify(contract, null, 2), 'application/json');
@@ -43,7 +43,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
       });
     }
 
-    test('EN and PL forms post to the same address', async ({ formApi }) => {
+    test('EN and PL forms use the same FormSubmit address', async ({ formApi }) => {
       const [en, pl] = await Promise.all([formApi.contract('en'), formApi.contract('pl')]);
       expect(pl.action).toBe(en.action);
     });
@@ -54,7 +54,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
       await allure.story('Endpoint behaviour');
     });
 
-    test('rejects GET with 405 and a JSON body', async ({ request, formApi }) => {
+    test('FormSubmit rejects GET requests with 405', async ({ request, formApi }) => {
       const { action } = await formApi.contract();
       const res = await request.get(action, { headers: { Accept: 'application/json' } });
 
@@ -65,7 +65,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
       expect.soft(body.success, 'GET must not count as a submission').not.toBe('true');
     });
 
-    test('allows the site to POST from the browser (CORS preflight)', async ({ request, formApi }) => {
+    test('FormSubmit allows the site to post from the browser', async ({ request, formApi }) => {
       await allure.severity(allure.Severity.CRITICAL);
       const { action } = await formApi.contract();
       const res = await request.fetch(action, {
@@ -94,7 +94,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
       await allure.severity(allure.Severity.BLOCKER);
     });
 
-    test('accepts a complete English request and returns the success response', { tag: ['@live-submit'] }, async ({ formApi }) => {
+    test('Complete request is accepted with a success response', { tag: ['@live-submit'] }, async ({ formApi }) => {
       // FormSubmit can take well over 30 s to confirm (KI-012); wait for it and report the time.
       test.setTimeout(150_000);
       const contract = await formApi.contract('en');
@@ -134,7 +134,7 @@ test.describe('Request form API (FormSubmit)', { tag: '@api' }, () => {
       });
     });
 
-    test('rejects a submission that does not come from a web page', async ({ formApi }) => {
+    test('Request not sent from the web page is rejected', async ({ formApi }) => {
       await allure.description(
         'FormSubmit only accepts posts that name the page they were sent from (Referer header). ' +
           'This guards against scripted spam. A rejected post sends no email.',
