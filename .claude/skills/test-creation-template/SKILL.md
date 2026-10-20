@@ -1,6 +1,6 @@
 ---
 name: test-creation-template
-description: Template and checklist for adding new tests to the Substandard Monsters test project (Playwright + TypeScript). Use EVERY time the user asks to add, create or write a test, a check or test cases, one or many. Every test is first written as a test case definition (short title, prerequisites, test data, numbered steps, assertions per step), then turned into BOTH the automated Playwright test and the matching manual test case, so the two always agree and are easy to understand. Also covers placement, naming, the code template, FormSubmit mocking, screenshots, running, and logging known issues.
+description: Template and checklist for adding new tests to the Substandard Monsters test project (Playwright + TypeScript). Use EVERY time the user asks to add, create or write a test, a check or test cases, one or many. Every test is first written as a test case definition (short title, platform type, prerequisites, test data, numbered steps, assertions per step), then turned into BOTH the automated Playwright test and the matching manual test case, so the two always agree and are easy to understand. Also covers placement, naming, the code template, FormSubmit mocking, screenshots, running, and logging known issues.
 ---
 
 # Test creation template
@@ -9,7 +9,8 @@ description: Template and checklist for adding new tests to the Substandard Mons
 
 This skill is how every new test is made in this project. The heart of it is the **test case
 definition**: a short, plain-language record of one test with a **title, prerequisites, test data,
-numbered steps and the assertions for each step**. It is written *before* any code. Both outputs are
+numbered steps and the assertions for each step**, plus its **platform type**. It is written *before*
+any code. Both outputs are
 produced from it:
 
 - the **automated test** (Playwright): same title, prerequisites as setup, one `test.step` per step with
@@ -34,7 +35,8 @@ plain words a non-programmer understands.
 ```
 Title:          <short sentence saying what is checked, e.g. "Quantity 0 is rejected">
 Area:           <feature › story, e.g. Request a print › Validation>
-Platform:       <Desktop + phone view (e2e) | Phone only (mobile) | API (no browser)>
+Platform type:  <Desktop | Mobile (phone) | Tablet | API (no browser)>, with browsers and screen size,
+                e.g. "Desktop: Chrome, Firefox, Edge, 1280 x 720" or "Mobile: Chrome, Firefox, Edge at 412 x 915, touch"
 Priority:       <Critical | High | Medium | Low>
 Prerequisites:  <state before step 1: page/URL, language, what is mocked or blocked, logged data>
 Test data:      <values used, e.g. name from Faker, email TEST_EMAIL, quantity "0">
@@ -52,6 +54,15 @@ Rules for the definition:
 - **Steps**: 1–6 numbered actions a person could do by hand; one action per step.
 - **Assertions**: every step has at least one "Expect:", each one checkable by looking at the page (or the
   response, for API tests). No step without an assertion.
+- **Platform type** (required): where the test is meant to run and be checked by hand:
+  - **Desktop**: Chrome, Firefox, Edge at desktop size (≥ 1280 px wide); spec in `tests/monsters/e2e/`.
+  - **Mobile (phone)**: Chrome, Firefox, Edge at phone size (Pixel 7, 412 x 915, touch); phone-only layout
+    checks go in `tests/monsters/mobile/`. Note: every e2e test also runs in phone view automatically.
+  - **Tablet**: 768 x 1024 (set with `test.use({ viewport })` inside a mobile spec).
+  - **API (no browser)**: direct requests to the form's backend; spec in `tests/monsters/api/`.
+  - **BrowserStack Mac** (optional extra): Safari / Chrome on macOS for compatibility runs.
+  Name the platform type in the definition, pick the folder in section 3 to match it, and carry it into the
+  manual case's `platform` field (section 5).
 - **Test data**: concrete values or the builder that makes them; never real personal data.
 
 ## 3. Pick the place
@@ -66,7 +77,8 @@ pick them; `@smoke` for the most important checks. Use the existing spec file fo
 otherwise create `<area>.spec.ts`.
 
 ## 4. Write the automated test from the definition
-Map it one-to-one: **title → test title**, **prerequisites → setup + `allure.description`**, **each step →
+Map it one-to-one: **title → test title**, **platform type → spec folder / projects**,
+**prerequisites → setup + `allure.description`**, **each step →
 one `test.step` named like the step**, **each "Expect:" → an `expect(...)` inside that step**.
 
 ```ts
@@ -128,7 +140,7 @@ MT-xxx come from the position):
 m({
   title: 'Quantity 0 is rejected',                       // = Title
   area: 'Request a print > Validation',                   // = Area
-  platform: 'desktop',                                     // = Platform (desktop | mobile | smallPhone | tablet)
+  platform: 'desktop',                                     // = Platform type (desktop | mobile | smallPhone | tablet)
   priority: 'Medium',                                      // = Priority
   pre: M_OPEN + ' Click "Request a print".',               // = Prerequisites (+ test data where useful)
   steps: [                                                 // = Steps and assertions, one row each
@@ -156,5 +168,5 @@ to pass.
 ## 8. Finish
 - Update `README.md` if a new area or command was added.
 - Commit with a clear message; ask before pushing.
-- Report to the user: the **test case definition(s)**, where the test(s) went, the result per browser, the
+- Report to the user: the **test case definition(s)** (including platform type), where the test(s) went, the result per browser, the
   manual case number(s), and any known issue logged.
