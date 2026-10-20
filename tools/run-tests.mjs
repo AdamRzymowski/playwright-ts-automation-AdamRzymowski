@@ -7,8 +7,10 @@
 //                    --together (one combined run instead of one run per browser)
 //                    --headed (show the browser windows; runs one test at a time unless --workers=N)
 //                    --perf=smoke|load  --testiny  --no-report (still builds the Allure report, just doesn't open it)
+// Runs against the LIVE site always upload to Testiny (owner's rule); other sites only with --testiny or "y".
+// Testiny run name: <DD.MM.YY>-<environment>-<attempt>, e.g. 20.10.26-live-2 (one run per session).
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 
 try {
@@ -223,10 +225,33 @@ if (suites.includes('perf') && !args.perf) {
   perfType = perfType.startsWith('l') ? 'load' : 'smoke';
 }
 
-let testiny = Boolean(args.testiny);
-if (playwrightSuites.length && !args.testiny && process.env.TESTINY_API_KEY && process.env.TESTINY_PROJECT) {
+// Testiny: always for live runs; otherwise opt-in (--testiny or answer y).
+const testinyConfigured = Boolean(process.env.TESTINY_API_KEY && process.env.TESTINY_PROJECT);
+let testiny = playwrightSuites.length > 0 && (Boolean(args.testiny) || target === 'live');
+if (testiny && !testinyConfigured) {
+  console.warn('\nTestiny upload skipped: TESTINY_API_KEY / TESTINY_PROJECT are not set in .env.');
+  testiny = false;
+} else if (!testiny && playwrightSuites.length && testinyConfigured) {
   testiny = (await ask('Upload the results to Testiny? (y/N): ', ['y', 'n', 'yes', 'no'], 'n')).startsWith('y');
 }
+
+/** Same convention and counter file as testiny.ts: <DD.MM.YY>-<environment>-<attempt>. */
+function nextRunName(environment, now = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const prefix = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${String(now.getFullYear()).slice(-2)}-${environment}`;
+  const file = 'reports/testiny-runs.json';
+  let counts = {};
+  try {
+    if (existsSync(file)) counts = JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    counts = {};
+  }
+  counts[prefix] = (counts[prefix] ?? 0) + 1;
+  mkdirSync('reports', { recursive: true });
+  writeFileSync(file, JSON.stringify(counts, null, 2));
+  return `${prefix}-${counts[prefix]}`;
+}
+const testinyRunName = testiny ? nextRunName(target) : null;
 
 let openReport = !args['no-report'];
 if (playwrightSuites.length && interactive) {
@@ -239,15 +264,16 @@ const env = {
   ...process.env,
   MONSTERS_ENV: target,
   MONSTERS_URL: siteUrl,
-  ...(testiny ? { TESTINY_UPLOAD: '1' } : {}),
+  ...(testiny ? { TESTINY_UPLOAD: '1', TESTINY_RUN_NAME: testinyRunName } : {}),
 };
 // Playwright starts the local server itself for MONSTERS_ENV=local, so let it decide.
 if (target === 'local' && !process.env.MONSTERS_URL) delete env.MONSTERS_URL;
 console.log(`\nSubstandard Monsters: ${ENVS[target].label} (${siteUrl})`);
-const run = (cmd) => {
+const run = (cmd, extraEnv = {}) => {
   console.log(`\n> ${cmd}\n`);
-  return spawnSync(cmd, { stdio: 'inherit', env, shell: true }).status ?? 1;
+  return spawnSync(cmd, { stdio: 'inherit', env: { ...env, ...extraEnv }, shell: true }).status ?? 1;
 };
+if (testiny) console.log(`Testiny run: ${testinyRunName}`);
 const results = [];
 const runStarted = Date.now();
 
@@ -308,10 +334,13 @@ if (playwrightSuites.length) {
     buildReports(null, title, true);
   } else {
     // One complete run per browser, one after another, each with its own reports.
-    for (const project of browserProjects) {
+    // All browsers report into the same Testiny run; only the last Playwright run closes it.
+    const lastIndex = browserProjects.length - 1 + (runApi ? 1 : 0);
+    const keepOpen = (i) => (testiny && i < lastIndex ? { TESTINY_COMPLETE_RUN: '0' } : {});
+    for (const [i, project] of browserProjects.entries()) {
       const title = `${name} on ${PROJECT_NAMES[project] ?? project}`;
       console.log(`\n================ ${title} ================`);
-      results.push([title, run(`npx playwright test${filter}${flags([project])}`)]);
+      results.push([title, run(`npx playwright test${filter}${flags([project])}`, keepOpen(i))]);
       buildReports(project, title, true);
     }
     if (runApi) {
@@ -378,6 +407,6 @@ for (const [name, status] of results) {
 if (reports.length > 1 && existsSync('allure-report/by-browser/index.html')) {
   console.log('  Open all Allure reports in your browser: npm run allure:browsers');
 }
-if (testiny) console.log('  Results uploaded to Testiny (Automation tab).');
+if (testiny) console.log(`  Testiny: results uploaded as run "${testinyRunName}" (Automation tab).`);
 console.log('=========================================\n');
 process.exit(results.some(([, s]) => s !== 0) ? 1 : 0);

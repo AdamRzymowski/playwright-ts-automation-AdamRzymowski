@@ -307,8 +307,14 @@ attachments (screenshots, videos).
    `.env` is git-ignored, so the key never reaches GitHub.
 3. Run `npm run test:testiny` (all tests, Monsters on the live site, results uploaded).
 
-Normal runs (`npm test` etc.) don't upload anything. Each test's Desktop / Mobile label is sent as a
+**Every run against the live site uploads automatically** (`npm run tests` with Live, `npm run test:live`,
+`npm run test:testiny`); runs against dev, local or a preview upload only with `--testiny` or a "y" to the
+question. Plain `npx playwright test` doesn't upload. Each test's Desktop / Mobile label is sent as a
 `platform` field.
+
+**Run names** follow `<DD.MM.YY>-<environment>-<attempt>`, e.g. `20.10.26-live-2` for the second live run on
+20 October 2026. The attempt is counted on this PC (`reports/testiny-runs.json`). When the runner tests
+browsers one after another, they all report into that one Testiny run; the last browser closes it.
 
 Uploaded results appear under Testiny's **Automation** tab. To also list the tests under **Test cases**
 (for test plans and manual runs), run the suite, then `npm run export:testiny`. That writes

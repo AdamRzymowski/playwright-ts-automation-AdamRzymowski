@@ -1,6 +1,7 @@
 import './env';
 import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
 import { MONSTERS_DIR, MONSTERS_ENV, MONSTERS_IS_LOCAL, MONSTERS_PORT, MONSTERS_URL } from './sites';
+import { nextRunName } from './testiny';
 
 /**
  * Site under test (URLs in sites.ts): the Substandard Monsters website, tests in tests/monsters/.
@@ -61,9 +62,15 @@ const browserstackProjects =
     : [];
 
 /*
- * Testiny (test management): uploads test cases and a test run when TESTINY_UPLOAD=1 (npm run test:testiny).
- * Needs TESTINY_API_KEY and TESTINY_PROJECT, e.g. in .env (see .env.example).
+ * Testiny (test management): uploads test cases and a test run when TESTINY_UPLOAD=1. `npm run tests` turns
+ * this on for every run against the live site. Needs TESTINY_API_KEY and TESTINY_PROJECT in .env.
+ * Run name: <DD.MM.YY>-<environment>-<attempt>, e.g. "20.10.26-live-2" (see testiny.ts). The runner passes
+ * TESTINY_RUN_NAME so all browsers of one session land in one Testiny run; TESTINY_COMPLETE_RUN=0 keeps the
+ * run open for the next browser, and the last one closes it.
  */
+// Workers re-read this config; keep the name in the environment so the attempt counter only moves once.
+if (process.env.TESTINY_UPLOAD && !process.env.TESTINY_RUN_NAME) process.env.TESTINY_RUN_NAME = nextRunName(MONSTERS_ENV);
+const TESTINY_RUN_NAME = process.env.TESTINY_RUN_NAME ?? '';
 const testiny: ReporterDescription[] = process.env.TESTINY_UPLOAD
   ? [
       [
@@ -73,7 +80,11 @@ const testiny: ReporterDescription[] = process.env.TESTINY_UPLOAD
           project: process.env.TESTINY_PROJECT,
           sourceName: process.env.TESTINY_SOURCE ?? 'playwright-ui',
           enableAttachments: true,
-          completeRuns: true,
+          // One Testiny run per name: identified and titled by run_name.
+          fixedValues: { run_name: TESTINY_RUN_NAME },
+          runFields: ['run_name'],
+          runTitlePattern: '%{run_name}',
+          completeRuns: process.env.TESTINY_COMPLETE_RUN !== '0',
           // Copies each test's "platform" annotation (Desktop / Mobile, set in fixtures/base.ts) into Testiny.
           customResultFields: ['platform'],
         },

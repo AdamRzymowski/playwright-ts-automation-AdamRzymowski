@@ -11,6 +11,15 @@ and KNOWN-ISSUES.md for open site bugs.
   place, title, template, run, manual case, known issues.
 - Test titles are a brief, self-contained description of what is checked (e.g. "Quantity 0 is rejected").
 
+## Testiny (always)
+- **Every run against the live site uploads its results to Testiny.** `npm run tests` does this automatically
+  for `--env=live` (and `npm run test:testiny`); never start a live run with results kept local only.
+  Other sites (dev, local, preview) upload only with `--testiny` or when the owner says so.
+- **Testiny run names: `<DD.MM.YY>-<environment>-<attempt>`**, e.g. `20.10.26-live-2`: day, month and last two
+  digits of the year, then the environment (live / dev / local / preview), then the attempt number for that
+  date and environment (1, 2, 3…). The runner builds the name (counter in `reports/testiny-runs.json`) and
+  puts all browsers of one session into that single Testiny run.
+
 ## Testing boundaries (always applies)
 - Never test third-party APIs, services or databases (e.g. FormSubmit, Facebook, Netlify, BrowserStack) beyond normal use of the site as a regular visitor would use it, unless the owner gives explicit permission for that specific test.
 - No security probing of third parties: no SQL/script injection aimed at their servers, no load, flood or DDoS-style traffic, no fuzzing their endpoints, no bypassing their protections.
