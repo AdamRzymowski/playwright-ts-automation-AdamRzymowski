@@ -1,4 +1,4 @@
-// Manual test cases: one for each automated UI test (tests/**/e2e and tests/**/mobile, excluding @api / @a11y).
+// Manual test cases: one for each automated UI test (tests/**/e2e and tests/**/mobile, excluding @a11y).
 // This file is the source; `npm run manual:build` turns it into manual-test-cases.csv and .pdf in this folder.
 // Each case: title, site, area, platform, priority, preconditions, steps [action, expected result], automated test.
 

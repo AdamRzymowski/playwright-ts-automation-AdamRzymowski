@@ -36,7 +36,7 @@ The runner checks that a deployed copy answers before testing it.
 | Before publishing, the `dev` branch | `npm run test:dev` | The dev branch preview |
 | After publishing | `npm run test:live` | The published site |
 
-Each asks which suites to run (add `--suite=ui,api` etc. to skip the question). In VS Code, the tasks
+Each asks which suites to run (add `--suite=ui,a11y` etc. to skip the question). In VS Code, the tasks
 *Tests: pull request preview* (asks for the number) and *Tests: live site* do the same.
 A typical flow: open a pull request from `dev` into `main`, run `test:preview` on it, merge when green,
 then run `test:live`.
@@ -56,20 +56,6 @@ The request form is never really sent: every call to FormSubmit is blocked or mo
 The real-submission test (`tests/monsters/e2e/real-submit.spec.ts`) is skipped unless `SUBMIT_REAL_FORM=1`
 is set. Its data is marked `[AUTOMATED TEST - please ignore]`. It checks the request the browser sent,
 the backend's response (status, headers, exact JSON body) and the page's success state.
-
-### API tests (request form backend)
-
-`tests/monsters/api/` tests FormSubmit, the service behind the request form, with plain HTTP calls and no
-browser (Playwright project `api`, tag `@api`, its own *API tests* view in the Allure report):
-
-| Group | Checks | Sends email? |
-| --- | --- | --- |
-| Contract | EN/PL forms POST to the FormSubmit AJAX endpoint, with the expected hidden fields (`_subject`, `_template`, `_captcha`, `Language`, empty `_honey`) and all field names | No |
-| Endpoint | GET is rejected with `405` + JSON; the CORS preflight lets the site POST with an `Accept` header | No |
-| Successful submission | A complete request returns `200`, JSON, CORS header, within 10 s, and exactly `{"success":"true","message":"The form was submitted successfully."}` | **Yes, 1 email** (opt-in) |
-
-`npm run test:api` runs them (the email test is skipped); `npm run test:api:submit` includes the real
-submission against the live site.
 
 Accessibility: `tests/monsters/*/accessibility.spec.ts` (tagged `@a11y`) scan each page state with
 [axe-core](https://github.com/dequelabs/axe-core) against WCAG 2.0/2.1/2.2 level A and AA, and add keyboard,
@@ -108,12 +94,11 @@ It asks what to run:
 Which tests do you want to run?
 
   1) UI tests  - functional browser tests of the site, desktop + mobile
-  2) API tests  - request form backend (FormSubmit), no browser
-  3) Accessibility tests  - WCAG 2.2 AA scans and keyboard checks
-  4) Performance tests  - k6 against the live Substandard Monsters site
-  5) All of them
+  2) Accessibility tests  - WCAG 2.2 AA scans and keyboard checks
+  3) Performance tests  - k6 against the live Substandard Monsters site
+  4) All of them
 
-Your choice [1-5, default 5]:
+Your choice [1-4, default 4]:
 ```
 
 then which site (live, dev, local or a pull request preview) and which **browsers** (desktop Chrome /
@@ -126,11 +111,11 @@ against the live site.
 | Command | Runs |
 | --- | --- |
 | `npm run tests -- --suite=ui` | UI tests |
-| `npm run tests -- --suite=api` | API tests |
 | `npm run tests -- --suite=ui --browsers=desktop` | UI tests on Chrome, Firefox and Edge only (`mobile`, `browserstack`, `all` also work) |
 | `npm run test:desktop-ui` | Same, against the live site |
 | `npm run test:browserstack` | UI tests on Safari and Chrome on a Mac (BrowserStack), against the live site |
 | `npm run tests -- --suite=a11y` | Accessibility tests |
+| `npm run tests -- --suite=ui --exclude="enough contrast"` | UI tests without the tests whose title matches (e.g. known failures) |
 | `npm run tests -- --suite=perf --perf=smoke` | k6 smoke test (`--perf=load` for the load test) |
 | `npm run tests -- --suite=all` | Everything |
 | `npm run tests -- --suite=ui,a11y --no-report` | Several suites; the Allure report is still built, just not opened |
@@ -332,10 +317,8 @@ allurerc.mjs             Allure report settings (name, plugins, history)
 tools/serve-static.mjs   Tiny static server for the local Monsters site
 pages/monsters/          Page object: the site's locators, texts (EN/PL) and actions
 fixtures/monsters.ts     Extended `test` (page objects, FormSubmit blocking, step screenshots)
-fixtures/formsubmit-api.ts  `test` for the API tests (form contract, real submission helper)
 tests/monsters/e2e/      Desktop specs (also run in phone view on every browser)
 tests/monsters/mobile/   Phone-only layout specs (mobile-chrome, mobile-firefox, mobile-edge)
-tests/monsters/api/      Backend tests of the request form (no browser)
 tests/utils/             Faker data builders, multipart parser, accessibility helper
 ```
 

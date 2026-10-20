@@ -22,7 +22,7 @@ const labels = (r, n) => r.labels.filter((l) => l.name === n).map((l) => l.value
 const projectOf = (r) => label(r, 'titlePath')?.split('>')[1]?.trim() ?? '?';
 const platformOf = (r) => {
   const p = projectOf(r);
-  return label(r, 'platform') ?? (p === 'api' ? 'API' : p.startsWith('mobile') ? 'Mobile' : 'Desktop');
+  return label(r, 'platform') ?? (p.startsWith('mobile') ? 'Mobile' : 'Desktop');
 };
 const plain = (s) => String(s ?? '').replace(/\x1b\[[0-9;]*m/g, '');
 const ms = (v) => (v == null || !isFinite(v) ? '—' : v >= 60000 ? `${(v / 60000).toFixed(1)} min` : v >= 1000 ? `${(v / 1000).toFixed(1)} s` : `${Math.round(v)} ms`);
@@ -36,7 +36,6 @@ const PROJECT_LABELS = {
   'mobile-chrome': 'Mobile Chrome',
   'mobile-firefox': 'Mobile Firefox',
   'mobile-edge': 'Mobile Edge',
-  api: 'API',
   'bs-mac-safari': 'Mac Safari (BrowserStack)',
   'bs-mac-chrome': 'Mac Chrome (BrowserStack)',
 };

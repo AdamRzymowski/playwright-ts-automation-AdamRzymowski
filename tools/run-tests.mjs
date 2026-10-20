@@ -1,12 +1,13 @@
 // Interactive test runner: `npm run tests` asks which suites to run, then runs them and shows the results.
 //
 // Non-interactive (CI or scripts):
-//   npm run tests -- --suite=ui|api|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
+//   npm run tests -- --suite=ui|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
 //                    --env=live|dev|local  --preview=<pull request number or preview URL>
 //                    --browsers=desktop|mobile|browserstack|all (comma-separate several)
 //                    --together (one combined run instead of one run per browser)
 //                    --headed (show the browser windows; runs one test at a time unless --workers=N)
 //                    --perf=smoke|load  --testiny  --no-report (still builds the Allure report, just doesn't open it)
+//                    --exclude="<title regex>" (leave out matching tests, e.g. known failures: --exclude="enough contrast")
 // Runs against the LIVE site always upload to Testiny (owner's rule); other sites only with --testiny or "y".
 // Testiny run name: <DD.MM.YY>-<environment>-<attempt>, e.g. 20.10.26-live-2 (one run per session).
 import { spawn, spawnSync } from 'node:child_process';
@@ -21,12 +22,11 @@ try {
 
 const SUITES = {
   ui: { label: 'UI tests', detail: 'functional browser tests of the site, desktop + mobile' },
-  api: { label: 'API tests', detail: 'request form backend (FormSubmit), no browser' },
   a11y: { label: 'Accessibility tests', detail: 'WCAG 2.2 AA scans and keyboard checks' },
   perf: { label: 'Performance tests', detail: 'k6 against the live Substandard Monsters site' },
 };
 // Playwright tags that mark the non-UI suites; UI tests are everything without one of them.
-const TAGS = { api: '@api', a11y: '@a11y' };
+const TAGS = { a11y: '@a11y' };
 
 const argv = process.argv.slice(2);
 const args = Object.fromEntries(
@@ -79,7 +79,7 @@ if (args.suite) {
 }
 const unknown = suites.filter((s) => !SUITES[s]);
 if (unknown.length) {
-  console.error(`Unknown suite(s): ${unknown.join(', ')}. Use ui, api, a11y, perf or all.`);
+  console.error(`Unknown suite(s): ${unknown.join(', ')}. Use ui, a11y, perf or all.`);
   process.exit(2);
 }
 const playwrightSuites = suites.filter((s) => s !== 'perf');
@@ -160,14 +160,14 @@ if (target !== 'local') {
 }
 
 // 3. Follow-up questions, only when relevant
-// Which browsers (Playwright projects). API tests have their own project and always run when chosen.
+// Which browsers (Playwright projects).
 const HAS_BROWSERSTACK = Boolean(process.env.BROWSERSTACK_USERNAME && process.env.BROWSERSTACK_ACCESS_KEY);
 const BROWSER_SETS = {
   desktop: { label: 'Desktop: Chrome, Firefox, Edge', projects: ['chromium', 'firefox', 'edge'] },
   mobile: { label: 'Mobile view: Chrome, Firefox and Edge at phone size (all tests + phone layout tests)', projects: ['mobile-chrome', 'mobile-firefox', 'mobile-edge'] },
   browserstack: { label: 'BrowserStack: Safari and Chrome on a Mac', projects: ['bs-mac-safari', 'bs-mac-chrome'] },
 };
-const browserTests = playwrightSuites.filter((s) => s !== 'api');
+const browserTests = playwrightSuites;
 let browserSets = args.browsers ? String(args.browsers).toLowerCase().split(',') : null;
 if (browserSets?.includes('all')) browserSets = ['desktop', 'mobile', ...(HAS_BROWSERSTACK ? ['browserstack'] : [])];
 if (!browserSets && browserTests.length && interactive) {
@@ -206,7 +206,6 @@ if (browserSets.includes('browserstack')) {
   }
 }
 const browserProjects = browserTests.length ? browserSets.flatMap((b) => BROWSER_SETS[b].projects) : [];
-const runApi = playwrightSuites.includes('api');
 // Default: every browser gets its own run, Allure report and PDF. --together runs them all at once.
 const together = Boolean(args.together);
 
@@ -286,7 +285,6 @@ const PROJECT_NAMES = {
   'mobile-edge': 'Mobile Edge',
   'bs-mac-safari': 'Mac Safari (BrowserStack)',
   'bs-mac-chrome': 'Mac Chrome (BrowserStack)',
-  api: 'API',
 };
 const reports = []; // [run name, allure folder, pdf]
 
@@ -315,7 +313,7 @@ function buildReports(slug, title, reportPlaywright) {
 }
 
 if (playwrightSuites.length) {
-  // UI = tests without an @api/@a11y tag. With UI chosen, leave out the tagged suites not chosen;
+  // UI = tests without an @a11y tag. With UI chosen, leave out the tagged suites not chosen;
   // without UI, run only the chosen tags.
   const chosenTags = playwrightSuites.filter((s) => TAGS[s]).map((s) => TAGS[s]);
   const otherTags = Object.values(TAGS).filter((t) => !chosenTags.includes(t));
@@ -324,29 +322,31 @@ if (playwrightSuites.length) {
       ? ` --grep-invert "${otherTags.join('|')}"`
       : ''
     : ` --grep "${chosenTags.join('|')}"`;
+  // --exclude: also leave out tests whose title matches (e.g. known failures).
+  const excludeFilter = args.exclude && args.exclude !== true
+    ? filter.startsWith(' --grep-invert ')
+      ? filter.replace(/"$/, `|${args.exclude}"`)
+      : `${filter} --grep-invert "${args.exclude}"`
+    : filter;
+  if (excludeFilter !== filter) console.log(`Leaving out tests matching: ${args.exclude}`);
   const name = browserTests.map((s) => SUITES[s].label).join(' + ');
-  const flags = (projects) => projects.map((p) => ` --project=${p}`).join('') + (projects.some((p) => p !== 'api') ? headedFlag : '') + workerFlag;
+  const flags = (projects) => projects.map((p) => ` --project=${p}`).join('') + headedFlag + workerFlag;
 
   if (together || browserProjects.length <= 1) {
-    const projects = [...browserProjects, ...(runApi ? ['api'] : [])];
+    const projects = browserProjects;
     const title = playwrightSuites.map((s) => SUITES[s].label).join(' + ') + (browserProjects.length ? ` on ${browserProjects.map((p) => PROJECT_NAMES[p] ?? p).join(', ')}` : '');
-    results.push([title, run(`npx playwright test${filter}${flags(projects)}`)]);
+    results.push([title, run(`npx playwright test${excludeFilter}${flags(projects)}`)]);
     buildReports(null, title, true);
   } else {
     // One complete run per browser, one after another, each with its own reports.
     // All browsers report into the same Testiny run; only the last Playwright run closes it.
-    const lastIndex = browserProjects.length - 1 + (runApi ? 1 : 0);
+    const lastIndex = browserProjects.length - 1;
     const keepOpen = (i) => (testiny && i < lastIndex ? { TESTINY_COMPLETE_RUN: '0' } : {});
     for (const [i, project] of browserProjects.entries()) {
       const title = `${name} on ${PROJECT_NAMES[project] ?? project}`;
       console.log(`\n================ ${title} ================`);
-      results.push([title, run(`npx playwright test${filter}${flags([project])}`, keepOpen(i))]);
+      results.push([title, run(`npx playwright test${excludeFilter}${flags([project])}`, keepOpen(i))]);
       buildReports(project, title, true);
-    }
-    if (runApi) {
-      console.log('\n================ API tests ================');
-      results.push(['API tests', run(`npx playwright test --grep "@api"${flags(['api'])}`)]);
-      buildReports('api', 'API tests', true);
     }
     // A small start page linking the per-browser Allure reports.
     const links = reports

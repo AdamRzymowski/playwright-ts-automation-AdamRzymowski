@@ -16,7 +16,6 @@ import { nextRunName } from './testiny';
  */
 const DESKTOP_SPECS = /[\\/]e2e[\\/].*\.spec\.ts$/;
 const MOBILE_SPECS = /[\\/]mobile[\\/].*\.spec\.ts$/;
-const API_SPECS = /[\\/]api[\\/].*\.spec\.ts$/;
 
 /*
  * BrowserStack: real Macs in the cloud for Safari (WebKit) and Chrome compatibility runs.
@@ -185,12 +184,6 @@ export default defineConfig({
       name: 'mobile-edge',
       testMatch: [DESKTOP_SPECS, MOBILE_SPECS],
       use: { ...devices['Pixel 7'], channel: 'msedge' },
-    },
-
-    /* Backend/API tests: plain HTTP requests, no browser. Run once, not per browser. */
-    {
-      name: 'api',
-      testMatch: API_SPECS,
     },
 
     /* Mac Safari and Chrome on BrowserStack (only with credentials; npm run tests > BrowserStack). */

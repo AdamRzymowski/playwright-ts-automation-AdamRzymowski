@@ -35,7 +35,7 @@ plain words a non-programmer understands.
 ```
 Title:          <short sentence saying what is checked, e.g. "Quantity 0 is rejected">
 Area:           <feature › story, e.g. Request a print › Validation>
-Platform type:  <Desktop | Mobile (phone) | Tablet | API (no browser)>, with browsers and screen size,
+Platform type:  <Desktop | Mobile (phone) | Tablet>, with browsers and screen size,
                 e.g. "Desktop: Chrome, Firefox, Edge, 1280 x 720" or "Mobile: Chrome, Firefox, Edge at 412 x 915, touch"
 Priority:       <Critical | High | Medium | Low>
 Prerequisites:  <state before step 1: page/URL, language, what is mocked or blocked, logged data>
@@ -52,14 +52,12 @@ Rules for the definition:
 - **Prerequisites**: everything that must be true before step 1, including mocks ("FormSubmit reply faked:
   success") so nothing real is sent. If none: "Site open at <page>".
 - **Steps**: 1–6 numbered actions a person could do by hand; one action per step.
-- **Assertions**: every step has at least one "Expect:", each one checkable by looking at the page (or the
-  response, for API tests). No step without an assertion.
+- **Assertions**: every step has at least one "Expect:", each one checkable by looking at the page. No step without an assertion.
 - **Platform type** (required): where the test is meant to run and be checked by hand:
   - **Desktop**: Chrome, Firefox, Edge at desktop size (≥ 1280 px wide); spec in `tests/monsters/e2e/`.
   - **Mobile (phone)**: Chrome, Firefox, Edge at phone size (Pixel 7, 412 x 915, touch); phone-only layout
     checks go in `tests/monsters/mobile/`. Note: every e2e test also runs in phone view automatically.
   - **Tablet**: 768 x 1024 (set with `test.use({ viewport })` inside a mobile spec).
-  - **API (no browser)**: direct requests to the form's backend; spec in `tests/monsters/api/`.
   - **BrowserStack Mac** (optional extra): Safari / Chrome on macOS for compatibility runs.
   Name the platform type in the definition, pick the folder in section 3 to match it, and carry it into the
   manual case's `platform` field (section 5).
@@ -70,7 +68,6 @@ Rules for the definition:
 | --- | --- | --- |
 | Behaviour a visitor sees (default) | `tests/monsters/e2e/` | Chrome, Firefox, Edge at desktop **and** phone size |
 | Phone-only layout (hamburger, stacking) | `tests/monsters/mobile/` | the three browsers at phone size |
-| Request form backend, no browser | `tests/monsters/api/` | the `api` project |
 
 Tags: `@a11y` (accessibility) and `@security` (security) on the test or its `describe` so `npm run tests` can
 pick them; `@smoke` for the most important checks. Use the existing spec file for the area if there is one;
@@ -121,7 +118,7 @@ test.describe('<Area>', () => {
 });
 ```
 Code rules:
-- Import `test` and `expect` from `fixtures/monsters` (`fixtures/formsubmit-api` for API tests), never from
+- Import `test` and `expect` from `fixtures/monsters`, never from
   `@playwright/test`: that `expect` attaches a **✓ passed / ✗ failed screenshot to every assertion**, and the
   fixtures add step screenshots, Desktop/Mobile labels and FormSubmit blocking.
 - Locators and texts live in `pages/monsters/MonstersPage.ts` (`getByTestId`, `getByRole`; no CSS/XPath in

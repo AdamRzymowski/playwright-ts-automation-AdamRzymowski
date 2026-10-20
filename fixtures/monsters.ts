@@ -5,6 +5,9 @@ import { MONSTERS_URL } from '../sites';
 /** Requests to FormSubmit, the service that emails the site's request form to the owner. */
 export const FORMSUBMIT = '**/formsubmit.co/**';
 
+/** Exact JSON FormSubmit returns for an accepted submission (success is the string "true"). */
+export const FORMSUBMIT_SUCCESS = { success: 'true', message: 'The form was submitted successfully.' } as const;
+
 type Options = {
   /** Let the form really reach FormSubmit (sends an email). Only tests/monsters/e2e/real-submit.spec.ts sets this. */
   allowRealEmails: boolean;

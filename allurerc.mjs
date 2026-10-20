@@ -27,10 +27,6 @@ export default defineConfig({
       import: '@allurereport/plugin-awesome',
       options: { reportName: 'Mobile tests', reportLanguage: 'en', groupBy, filter: platformIs('Mobile') },
     },
-    api: {
-      import: '@allurereport/plugin-awesome',
-      options: { reportName: 'API tests', reportLanguage: 'en', groupBy, filter: platformIs('API') },
-    },
     charts: {
       import: '@allurereport/plugin-dashboard',
       options: { reportName: 'Charts' },

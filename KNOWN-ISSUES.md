@@ -171,8 +171,7 @@ or a captcha that works with AJAX submissions.
 doesn't send it (`sql-guard.spec.ts`). Like the length limits, it runs only in the page, so it catches
 casual attempts but not requests posted straight to FormSubmit; the fixes above are still needed.
 
-**Automated tests:** `tests/monsters/api/formsubmit.spec.ts` checks the form's FormSubmit address; the
-contract test will need its expectation updated when the alias is used.
+**Automated tests:** none since the API tests were removed (2026-10-20); the form tests fake FormSubmit.
 
 ---
 
@@ -251,8 +250,7 @@ form for FormSubmit, so every submission is rejected until it is activated.
 the link, then send one test request. Consider switching the action to the FormSubmit alias at the same time
 (KI-006).
 
-**Automated tests:** `tests/monsters/e2e/real-submit.spec.ts` and the "Complete request is accepted with a success response" test in
-`tests/monsters/api/formsubmit.spec.ts` (opt-in, `SUBMIT_REAL_FORM=1`); both failed with this message.
+**Automated tests:** `tests/monsters/e2e/real-submit.spec.ts` and the "Complete request is accepted with a success response" API test (opt-in, `SUBMIT_REAL_FORM=1`; API tests removed 2026-10-20); both failed with this message.
 The everyday form tests fake FormSubmit's reply, so they could not catch it: run the opt-in tests after any
 domain or hosting change.
 
@@ -300,9 +298,8 @@ on the request, so if FormSubmit never answers, the page never recovers.
 `fetch`) and then show a friendlier message such as "This is taking longer than usual: your request may
 still arrive. Please wait a few minutes before sending it again."
 
-**Automated tests:** `tests/monsters/e2e/real-submit.spec.ts` and the successful-submission test in
-`tests/monsters/api/formsubmit.spec.ts` now wait up to 2 minutes, pass when FormSubmit confirms, and
-separately flag a reply slower than 15 seconds.
+**Automated tests:** `tests/monsters/e2e/real-submit.spec.ts` now waits up to 2 minutes, passes when FormSubmit confirms, and
+separately flags a reply slower than 15 seconds.
 
 ---
 

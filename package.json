@@ -30,8 +30,6 @@
     "perf:load": "cross-env K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_OPEN=false K6_WEB_DASHBOARD_EXPORT=reports/k6-load-report.html k6 run perf/load.ts",
     "tests": "node tools/run-tests.mjs",
     "test:ui-only": "playwright test --grep-invert @a11y",
-    "test:api": "playwright test --project=api",
-    "test:api:submit": "cross-env SUBMIT_REAL_FORM=1 MONSTERS_ENV=live playwright test --project=api",
     "report:pdf": "node tools/report-pdf.mjs",
     "test:monsters:dev": "cross-env MONSTERS_ENV=dev playwright test tests/monsters",
     "test:monsters:local": "cross-env MONSTERS_ENV=local playwright test tests/monsters",

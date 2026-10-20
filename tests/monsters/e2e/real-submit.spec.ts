@@ -1,8 +1,7 @@
 import * as allure from 'allure-js-commons';
-import { test, expect, FORMSUBMIT } from '../../../fixtures/monsters';
+import { test, expect, FORMSUBMIT, FORMSUBMIT_SUCCESS } from '../../../fixtures/monsters';
 import type { RequestDetails } from '../../../pages/monsters/MonstersPage';
 import { REAL_SUBMIT_EMAIL } from '../../utils/testData';
-import { FORMSUBMIT_SUCCESS } from '../../../fixtures/formsubmit-api';
 
 /**
  * End-to-end: really submits the request form to FormSubmit, which emails the site owner.

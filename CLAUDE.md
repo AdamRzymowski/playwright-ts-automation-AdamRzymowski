@@ -28,7 +28,7 @@ and KNOWN-ISSUES.md for open site bugs.
 - Real form submissions (they email the owner) are opt-in and need the owner's go-ahead each time.
 
 ## Commands
-- `npm run tests` — interactive runner: suites (UI / API / accessibility / performance), site (live / dev /
+- `npm run tests` — interactive runner: suites (UI / accessibility / performance), site (live / dev /
   local / PR preview), browsers (desktop, phone view, BrowserStack), headed or not. Flags skip the questions:
   `npm run tests -- --suite=ui --env=live --browsers=desktop,mobile --no-report`
 - `npx playwright test <file> -g "<title>" --project=chromium` — fastest check of one test
@@ -39,13 +39,13 @@ and KNOWN-ISSUES.md for open site bugs.
   they already said.
 
 ## Conventions
-- Specs import `test` and `expect` from `fixtures/monsters.ts` (`fixtures/formsubmit-api.ts` for API tests),
+- Specs import `test` and `expect` from `fixtures/monsters.ts`,
   never from `@playwright/test`: that `expect` screenshots every assertion (✓ passed / ✗ failed) and the
-  fixtures add step screenshots, Desktop/Mobile/API labels and FormSubmit blocking.
+  fixtures add step screenshots, Desktop/Mobile labels and FormSubmit blocking.
 - Locators and EN/PL texts live in `pages/monsters/MonstersPage.ts`; the site uses `data-testid`
   (`getByTestId`). No CSS/XPath in specs.
 - `tests/monsters/e2e/` runs at desktop and phone size on Chrome, Firefox and Edge; `tests/monsters/mobile/`
-  only at phone size; `tests/monsters/api/` without a browser. Tags: `@a11y`, `@api`, `@security`, `@smoke`.
+  only at phone size. Tags: `@a11y`, `@security`, `@smoke`.
 - Every spec sets `allure.epic('Substandard Monsters')` and `allure.feature(...)` in `beforeEach`; key tests set
   `allure.severity`. Use `expect.soft` for several independent checks and `test.step` for phases.
 - Test data comes from `tests/utils/testData.ts` (Faker). Form test email: `TEST_EMAIL`

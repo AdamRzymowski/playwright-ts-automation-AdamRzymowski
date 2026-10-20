@@ -1,16 +1,15 @@
 import { test as base, expect as baseExpect, type Page } from '@playwright/test';
 import * as allure from 'allure-js-commons';
 
-export type Platform = 'Desktop' | 'Mobile' | 'API';
+export type Platform = 'Desktop' | 'Mobile';
 
-/** Mobile projects are named mobile-*, the api project has no browser, everything else is desktop. */
+/** Mobile projects are named mobile-*, everything else is desktop. */
 export function platformOf(projectName: string): Platform {
-  if (projectName === 'api') return 'API';
   return projectName.startsWith('mobile') ? 'Mobile' : 'Desktop';
 }
 
 /**
- * Shared base for every site's fixtures. Labels each test Desktop, Mobile or API in Allure
+ * Shared base for every site's fixtures. Labels each test Desktop or Mobile in Allure
  * (parentSuite + a "platform" label) so the report can group and filter by it.
  */
 export const test = base.extend<{ platformLabel: void }>({

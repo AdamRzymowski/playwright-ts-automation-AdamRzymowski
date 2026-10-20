@@ -21,7 +21,7 @@ const cases = CASES.map((c, i) => (c === RETIRED ? null : {
 })).filter(Boolean);
 
 // ---- Coverage check: one manual case per automated UI test ----------------------------------
-const list = spawnSync('npx playwright test --list --reporter=json --grep-invert "@api|@a11y"', {
+const list = spawnSync('npx playwright test --list --reporter=json --grep-invert "@a11y"', {
   shell: true,
   encoding: 'utf8',
   maxBuffer: 64 * 1024 * 1024,
