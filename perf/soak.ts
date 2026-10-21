@@ -118,6 +118,11 @@ export default async function () {
       await guardOwnSiteOnly(page);
       await think(page);
     }
+    check(true, { '0. visit completed without errors': (v) => v });
+  } catch (error) {
+    // A crash (timeout, script error) must fail the run, not silently skip the remaining steps.
+    console.error(`Visit stopped: ${error}`);
+    check(false, { '0. visit completed without errors': (v) => v });
   } finally {
     await page.close();
   }
@@ -127,15 +132,15 @@ export default async function () {
 async function openTab(page: Page, testId: string, gallery: string | null) {
   const started = Date.now();
   await byTestId(page, testId).click();
-  // Poll with evaluate (k6's waitForFunction doesn't pass an argument object reliably).
+  // Poll with evaluate. No template strings inside page functions: k6 1.1 fails on them
+  // ("SyntaxError: Unexpected end of input").
   let shown = false;
   while (!shown && Date.now() - started < 5_000) {
-    shown = await page.evaluate(
-      ([id, name]: [string, string]) =>
-        !!document.querySelector(`[data-testid="${id}"]`)?.classList.contains('active') &&
-        (!name || !document.querySelector(`.gallery[data-gallery="${name}"]`)?.hasAttribute('hidden')),
-      [testId, gallery ?? ''],
-    );
+    shown = await page.evaluate((a: string[]) => {
+      const tab = document.querySelector('[data-testid="' + a[0] + '"]');
+      const shownGallery = a[1] ? document.querySelector('.gallery[data-gallery="' + a[1] + '"]') : null;
+      return !!tab && tab.classList.contains('active') && (!a[1] || (!!shownGallery && !shownGallery.hasAttribute('hidden')));
+    }, [testId, gallery ?? '']);
     if (!shown) await page.waitForTimeout(25);
   }
   if (shown) tabSwitch.add(Date.now() - started);
