@@ -149,4 +149,4 @@ Each line gives the success criterion (SC), what it means here, and **how to che
 - A failure on the site → a `KNOWN-ISSUES.md` entry. Include the WCAG criterion number and level, the
   measured value (for example "contrast 2.77:1, needs 4.5:1"), the steps, a fix and the covering test.
   Don't weaken a test to make it pass.
-- Pages this project generates (Allure index, PDF, k6 report): fix the problem in this repo directly.
+- Generated HTML pages (e.g. the Allure by-browser index): fix the problem in this repo directly.
