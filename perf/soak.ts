@@ -39,7 +39,8 @@ export const options = {
     browser_web_vital_cls: ['p(75)<0.1'],
     // Clicks feel instant: a gallery tab shows its photos, a photo opens.
     tab_switch: ['p(95)<500'],
-    photo_open: ['p(95)<1500'],
+    // Includes downloading the full-size photo, so it depends on the tester's connection (as in load.ts).
+    photo_open: ['p(95)<3000'],
     // Never anything from another site.
     third_party_loads: ['count==0'],
   },
@@ -126,15 +127,17 @@ export default async function () {
 async function openTab(page: Page, testId: string, gallery: string | null) {
   const started = Date.now();
   await byTestId(page, testId).click();
-  const shown = await page
-    .waitForFunction(
-      ({ id, name }: { id: string; name: string | null }) =>
-        document.querySelector(`[data-testid="${id}"]`)?.classList.contains('active') &&
+  // Poll with evaluate (k6's waitForFunction doesn't pass an argument object reliably).
+  let shown = false;
+  while (!shown && Date.now() - started < 5_000) {
+    shown = await page.evaluate(
+      ([id, name]: [string, string]) =>
+        !!document.querySelector(`[data-testid="${id}"]`)?.classList.contains('active') &&
         (!name || !document.querySelector(`.gallery[data-gallery="${name}"]`)?.hasAttribute('hidden')),
-      { timeout: 5_000 },
-      { id: testId, name: gallery },
-    )
-    .then(() => true, () => false);
+      [testId, gallery ?? ''],
+    );
+    if (!shown) await page.waitForTimeout(25);
+  }
   if (shown) tabSwitch.add(Date.now() - started);
   check(shown, { [`3. tab "${testId.replace(/^gallery-(sub)?tab-/, '')}" shows its photos`]: (v) => v });
   await think(page);

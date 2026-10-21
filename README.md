@@ -284,7 +284,7 @@ Each visitor waits 1–3 s between clicks, like a person looking at the page. It
 fast and working over a long session:
 - every click does what it should (99% of checks);
 - Core Web Vitals stay "good" (LCP under 2.5 s, CLS under 0.1, for 75% of page loads);
-- a gallery tab switches within 0.5 s and a photo opens within 1.5 s (95% of the time).
+- a gallery tab switches within 0.5 s and a photo opens, full-size, within 3 s (95% of the time).
 
 Only our own site is loaded. `npm run perf:soak` blocks Google Fonts with `K6_BROWSER_ARGS`, and every visit
 checks that nothing came from another site; if something did, the test stops. The test starts 15 Chrome
