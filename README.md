@@ -187,6 +187,11 @@ report you generate.
 - **Adding a test:** Claude follows the `test-creation-template` skill (`.claude/skills/`), required by
   CLAUDE.md: placement, a brief self-describing title, the code template, running it on every browser, the
   matching manual case and any known issue.
+- **Accessibility check:** every change is checked against the `wcag-check` skill
+  (`.claude/skills/wcag-check/`, WCAG 2.2 AA). The skill lists:
+  - which criteria a change touches;
+  - how to check each one (the `@a11y` tests plus manual checks);
+  - how to report and log failures.
 - **Titles:** every test is named with a short sentence saying what it checks, e.g. "Quantity 0 is rejected".
 - **Proof screenshots:** every assertion attaches a screenshot to the report, "✓ passed: …" or "✗ failed: …"
   with what was checked, plus one after each named step and one at the end of each test. They're visible-
@@ -295,8 +300,15 @@ passing, 95% of HTML pages within 1 s and 95% of CSS/JS/photos within 2 s (1.5 s
 HTML time-to-first-byte within 600 ms (800 ms under load). Photo download times depend on your own
 internet connection, which is why they have a separate, looser limit. k6 exits with an error when a rule is broken.
 
-Results: a summary in the console, plus `reports/k6-<test>-report.html` (graphs you can open in a
-browser) and `reports/k6-<test>-summary.txt|json`. Point at another copy with
+Results: every run ends with a **performance report**, printed and saved as `reports/k6-<test>-report.md`
+(`perf/lib/report.ts`). It covers:
+- PASSED or FAILED;
+- visitors, visits, requests and data downloaded;
+- every pass/fail limit with the measured value;
+- any failed checks.
+
+Also saved: k6's own summary (`reports/k6-<test>-summary.txt|json`) and `reports/k6-<test>-report.html`
+(graphs you can open in a browser). Point at another copy with
 `k6 run -e MONSTERS_URL=https://... perf/smoke.ts`; `npm run tests` passes the chosen environment for you
 (and starts the local web server when you pick `local`). Keep the load small: the site runs on Netlify's free plan.
 

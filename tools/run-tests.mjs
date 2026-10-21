@@ -406,6 +406,9 @@ if (suites.includes('perf')) {
     if (existsSync(`reports/k6-${perfType}-report.html`)) {
       console.log(`\nk6 dashboard: reports/k6-${perfType}-report.html`);
     }
+    if (existsSync(`reports/k6-${perfType}-report.md`)) {
+      console.log(`Performance report: reports/k6-${perfType}-report.md`);
+    }
     buildReports('performance', `Performance (${perfType})`, false);
   }
 }

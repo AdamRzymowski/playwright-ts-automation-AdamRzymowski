@@ -23,6 +23,8 @@ import { saveSummary } from './lib/summary.ts';
  * Shorter or smaller: npm run perf:soak -- -e SOAK_USERS=2 -e SOAK_DURATION=1m
  */
 export const options = {
+  // p(75) is the Core Web Vitals standard; k6 only saves it when listed here.
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(75)', 'p(90)', 'p(95)'],
   scenarios: {
     soak: {
       executor: 'constant-vus',

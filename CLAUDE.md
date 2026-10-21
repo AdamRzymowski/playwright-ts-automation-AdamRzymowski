@@ -11,6 +11,14 @@ and KNOWN-ISSUES.md for open site bugs.
   place, title, template, run, manual case, known issues.
 - Test titles are a brief, self-contained description of what is checked (e.g. "Quantity 0 is rejected").
 
+## Accessibility (always)
+- **Check every change against the `wcag-check` skill** (`.claude/skills/wcag-check/SKILL.md`, WCAG 2.2 AA)
+  before committing. That covers changes to the site (`../Substandard-Monsters`), tests that touch page
+  behaviour, and pages or reports this project generates.
+- Report which criteria the change touches and the result of each. Log site failures in KNOWN-ISSUES.md with
+  the WCAG criterion number.
+- Running the accessibility tests against a site still follows "Ask before running".
+
 ## Ask before running anything outside this repo (always)
 - **Ask the owner every time before executing anything that this git project doesn't own**, and wait for a yes.
   That includes:
