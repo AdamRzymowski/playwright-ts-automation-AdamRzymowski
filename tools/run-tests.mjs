@@ -6,7 +6,7 @@
 //                    --browsers=desktop|mobile|browserstack|all (comma-separate several)
 //                    --together (one combined run instead of one run per browser)
 //                    --headed (show the browser windows; runs one test at a time unless --workers=N)
-//                    --perf=smoke|load  --testiny  --no-report (still builds the Allure report, just doesn't open it)
+//                    --perf=smoke|load|soak  --testiny  --no-report (still builds the Allure report, just doesn't open it)
 //                    --exclude="<title regex>" (leave out matching tests, e.g. known failures: --exclude="enough contrast")
 // Runs against the LIVE site always upload to Testiny (owner's rule); other sites only with --testiny or "y".
 // Testiny run name: <DD.MM.YY>-<environment>-<attempt>, e.g. 20.10.26-live-2 (one run per session).
@@ -220,8 +220,23 @@ const headedFlag = headed ? ' --headed' : '';
 
 let perfType = args.perf ?? 'smoke';
 if (suites.includes('perf') && !args.perf) {
-  perfType = await ask('Performance test: (s)moke 30 s, 1 visitor or (l)oad ~2.5 min, up to 10 visitors? [s]: ', ['s', 'l', 'smoke', 'load'], 's');
-  perfType = perfType.startsWith('l') ? 'load' : 'smoke';
+  perfType = await ask(
+    'Performance test: (s)moke 30 s, 1 visitor / (l)oad ~2.5 min, up to 10 visitors / soa(k) 15 min, 15 visitors clicking in browsers? [s]: ',
+    ['s', 'l', 'k', 'smoke', 'load', 'soak'],
+    's',
+  );
+  perfType = perfType.startsWith('l') ? 'load' : perfType === 'k' || perfType === 'soak' ? 'soak' : 'smoke';
+  if (perfType === 'soak') {
+    const go = await ask('The soak test runs 15 minutes and starts 15 headless Chrome windows on this PC. Start it? (y/N): ', ['y', 'n', 'yes', 'no'], 'n');
+    if (!go.startsWith('y')) {
+      console.log('Soak test cancelled; running the smoke test instead.');
+      perfType = 'smoke';
+    }
+  }
+}
+if (!['smoke', 'load', 'soak'].includes(perfType)) {
+  console.error(`Unknown performance test "${perfType}". Use smoke, load or soak.`);
+  process.exit(2);
 }
 
 // Testiny: always for live runs; otherwise opt-in (--testiny or answer y).

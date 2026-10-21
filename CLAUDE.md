@@ -11,6 +11,25 @@ and KNOWN-ISSUES.md for open site bugs.
   place, title, template, run, manual case, known issues.
 - Test titles are a brief, self-contained description of what is checked (e.g. "Quantity 0 is rejected").
 
+## Ask before running anything outside this repo (always)
+- **Ask the owner every time before executing anything that this git project doesn't own**, and wait for a yes.
+  That includes:
+  - test runs against the live, dev or preview site, and which suites to run;
+  - performance tests (k6 smoke, load, soak);
+  - real form submissions;
+  - BrowserStack;
+  - Testiny uploads outside the live-run rule below;
+  - commands in the site repo `../Substandard-Monsters`;
+  - installing or updating tools and packages;
+  - git push.
+- A yes covers that one run, not later ones.
+- No need to ask for work inside this repo:
+  - editing files;
+  - `npx playwright test --list --reporter=list`;
+  - `npm run manual:build`;
+  - checking a k6 script without running it (`k6 inspect`);
+  - local commits.
+
 ## Testiny (always)
 - **Every run against the live site uploads its results to Testiny.** `npm run tests` does this automatically
   for `--env=live` (and `npm run test:testiny`); never start a live run with results kept local only.

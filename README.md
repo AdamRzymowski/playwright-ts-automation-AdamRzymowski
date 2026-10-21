@@ -3,7 +3,7 @@
 Test automation for the **Substandard Monsters** 3D-printing website (https://substandard-monsters.com,
 repo [substandard-monsters](https://github.com/AdamRzymowski/substandard-monsters)) with
 [Playwright](https://playwright.dev) and TypeScript. It runs on Chrome, Firefox and Edge at desktop and phone
-size, checks the request form's backend (FormSubmit), accessibility (WCAG 2.2 AA) and performance (k6), and
+size, checks accessibility (WCAG 2.2 AA) and performance (k6), and
 draws results in an [Allure](https://allurereport.org) dashboard and a PDF.
 
 ## Substandard Monsters tests
@@ -102,7 +102,7 @@ Your choice [1-4, default 4]:
 ```
 
 then which site (live, dev, local or a pull request preview) and which **browsers** (desktop Chrome /
-Firefox / Edge, mobile, both, or BrowserStack Mac), then the follow-ups that apply: k6 smoke or load, upload to Testiny (only if `.env` has a key), and
+Firefox / Edge, mobile, both, or BrowserStack Mac), then the follow-ups that apply: k6 smoke, load or soak, upload to Testiny (only if `.env` has a key), and
 whether to open the Allure report (it is always built after a Playwright run). It ends with a PASSED/FAILED summary per suite. Monsters tests run
 against the live site.
 
@@ -116,7 +116,7 @@ against the live site.
 | `npm run test:browserstack` | UI tests on Safari and Chrome on a Mac (BrowserStack), against the live site |
 | `npm run tests -- --suite=a11y` | Accessibility tests |
 | `npm run tests -- --suite=ui --exclude="enough contrast"` | UI tests without the tests whose title matches (e.g. known failures) |
-| `npm run tests -- --suite=perf --perf=smoke` | k6 smoke test (`--perf=load` for the load test) |
+| `npm run tests -- --suite=perf --perf=smoke` | k6 smoke test (`--perf=load` for the load test, `--perf=soak` for the 15-minute soak test) |
 | `npm run tests -- --suite=all` | Everything |
 | `npm run tests -- --suite=ui,a11y --no-report` | Several suites; the Allure report is still built, just not opened |
 
@@ -250,7 +250,7 @@ the test code.
 | Screenshots | Inside the Allure and Playwright reports (`test-results/` while running) | **Every test, passed or failed**: a full-page screenshot at the end, plus an "after step" screenshot after each named `test.step()` |
 | Videos, traces | Same | Kept for failed tests; `npm run report:full` keeps every video |
 | Testiny | Testiny cloud, Automation tab | Answer *yes* to the Testiny question in `npm run tests`, or `npm run test:testiny` |
-| k6 dashboards | `reports/k6-<test>-report.html` | `npm run perf:smoke` / `perf:load` |
+| k6 dashboards | `reports/k6-<test>-report.html` | `npm run perf:smoke` / `perf:load` / `perf:soak` |
 
 The PDF covers only the run that just finished:
 - **Run details**: site and app version, test-code commit, machine, Node, Playwright and exact browser versions
@@ -270,6 +270,25 @@ never send the request form. Install k6 once (`winget install k6 --source winget
 | --- | --- |
 | `npm run perf:smoke` | 1 visitor for 30 s: is the site up, correct and fast? |
 | `npm run perf:load` | Ramps up to 10 visitors at once over ~2.5 min |
+| `npm run perf:soak` | **Soak test:** 15 visitors click around the site in real headless Chrome for 15 minutes |
+
+**Soak test** (`perf/soak.ts`, k6 browser): each of the 15 visitors repeats one round for 15 minutes:
+1. Open the home page.
+2. Click "Gallery".
+3. Click every gallery tab and the Miniatures / Terrain sub-tabs, in random order.
+4. Open a random photo and close it with Escape.
+5. Click two random menu links.
+6. Sometimes switch to Polish.
+
+Each visitor waits 1–3 s between clicks, like a person looking at the page. It checks that the site stays
+fast and working over a long session:
+- every click does what it should (99% of checks);
+- Core Web Vitals stay "good" (LCP under 2.5 s, CLS under 0.1, for 75% of page loads);
+- a gallery tab switches within 0.5 s and a photo opens within 1.5 s (95% of the time).
+
+Only our own site is loaded. `npm run perf:soak` blocks Google Fonts with `K6_BROWSER_ARGS`, and every visit
+checks that nothing came from another site; if something did, the test stops. The test starts 15 Chrome
+windows (about 3–5 GB of memory). For a short try: `npm run perf:soak -- -e SOAK_USERS=2 -e SOAK_DURATION=1m`.
 
 Pass/fail rules (`thresholds` in `perf/lib/monsters.ts`): under 1% failed requests, every content check
 passing, 95% of HTML pages within 1 s and 95% of CSS/JS/photos within 2 s (1.5 s / 3 s under load), and

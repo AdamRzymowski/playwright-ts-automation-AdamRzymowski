@@ -59,6 +59,9 @@ Rules for the definition:
     checks go in `tests/monsters/mobile/`. Note: every e2e test also runs in phone view automatically.
   - **Tablet**: 768 x 1024 (set with `test.use({ viewport })` inside a mobile spec).
   - **BrowserStack Mac** (optional extra): Safari / Chrome on macOS for compatibility runs.
+  - **Performance (k6)**: virtual users against our own site. Give the number of users, the duration, and
+    whether it's protocol-level (HTTP) or browser (`k6/browser`, real Chromium clicks). Script in `perf/`;
+    no manual case.
   Name the platform type in the definition, pick the folder in section 3 to match it, and carry it into the
   manual case's `platform` field (section 5).
 - **Test data**: concrete values or the builder that makes them; never real personal data.
@@ -68,6 +71,7 @@ Rules for the definition:
 | --- | --- | --- |
 | Behaviour a visitor sees (default) | `tests/monsters/e2e/` | Chrome, Firefox, Edge at desktop **and** phone size |
 | Phone-only layout (hamburger, stacking) | `tests/monsters/mobile/` | the three browsers at phone size |
+| Performance: speed under N users over time | `perf/<name>.ts` + `npm run perf:<name>` | k6 (only when the owner says yes) |
 
 Tags: `@a11y` (accessibility) and `@security` (security) on the test or its `describe` so `npm run tests` can
 pick them; `@smoke` for the most important checks. Use the existing spec file for the area if there is one;
@@ -129,6 +133,23 @@ Code rules:
 - Never send real requests, injection strings or load to third parties (CLAUDE.md "Testing boundaries").
   Real submissions only in opt-in tests that skip unless `SUBMIT_REAL_FORM=1`, Chromium only.
 
+### 4b. Performance tests (k6) from the definition
+Map the definition to the k6 script:
+- **Prerequisites → `options`**: users, duration, `scenarios`.
+- **Steps → one `group()` per step**, named like the step.
+- **Each "Expect:" → a `check()`**.
+- **Pass/fail limits → `thresholds`**: k6 exits non-zero when one is broken.
+
+Rules:
+- Reuse `perf/lib/monsters.ts` (`BASE_URL`, shared thresholds) and `perf/lib/summary.ts` (`saveSummary`).
+- **Only load our own site.** In browser tests, block third-party hosts (Google Fonts…) and check that none
+  were loaded. Never click Facebook, never submit the form.
+- Keep loads small (Netlify free plan): at most ~15 users.
+- Add `perf:<name>` to `package.json` with the HTML dashboard export to `reports/k6-<name>-report.html`.
+  Add the type to `tools/run-tests.mjs` (perf question) and to README.
+- Check the script without running it: `k6 inspect perf/<name>.ts`. Run it only after the owner says yes
+  (section 6).
+
 ## 5. Write the manual test case from the same definition
 Append it at the **end** of `CASES` in `Manual tests/manual-test-cases.mjs` (never in the middle: case numbers
 MT-xxx come from the position):
@@ -150,6 +171,14 @@ m({
 Then run `npm run manual:build`; it must say **all matched** (one manual case per automated UI test).
 
 ## 6. Run it
+0. **Ask first** (CLAUDE.md "Ask before running"). Before any run against the live, dev or preview site, any
+   k6 performance test, BrowserStack, or anything else outside this repo, tell the owner:
+   - what will run;
+   - against which site;
+   - for how long;
+   - whether it sends email or uploads to Testiny.
+
+   Then wait for a yes. A yes covers that one run only.
 1. `npx playwright test <file> -g "<title>" --project=chromium` against the right site
    (`MONSTERS_ENV=local` for unpublished changes, `live` for the published site) until it passes, or fails
    only because of a real site bug.

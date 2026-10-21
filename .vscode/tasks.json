@@ -89,6 +89,14 @@
       "problemMatcher": []
     },
     {
+      "label": "Tests: performance soak, 15 min (k6 browser)",
+      "type": "shell",
+      "command": "npm run tests -- --suite=perf --perf=soak",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
       "label": "Tests: all suites",
       "type": "shell",
       "command": "npm run tests -- --suite=all --perf=smoke",

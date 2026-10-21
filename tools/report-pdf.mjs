@@ -151,7 +151,7 @@ if (projects.some((p) => p.startsWith('bs-'))) env.push(['BrowserStack', 'macOS 
 
 // ---- k6 performance summaries -----------------------------------------------------------
 const k6Since = process.env.RUN_STARTED ? Number(process.env.RUN_STARTED) : isFinite(started) ? started - 30 * 60 * 1000 : 0;
-const perf = ['smoke', 'load']
+const perf = ['smoke', 'load', 'soak']
   .map((name) => ({ name, file: join(OUT_DIR, `k6-${name}-summary.json`) }))
   .filter(({ file }) => existsSync(file) && statSync(file).mtimeMs >= k6Since)
   .map(({ name, file }) => {
@@ -316,11 +316,18 @@ ${
   perf.length
     ? `<h2>Performance (k6)</h2>${perf
         .map(
-          (p) => `<h3>${p.name === 'load' ? 'Load test' : 'Smoke test'} <span class="muted">· ${p.when.toLocaleString('en-GB')}</span></h3>
-<table><tr><th>Requests</th><th>Failed</th><th>Checks passed</th><th>Max visitors</th><th>p95 all requests</th><th>p95 page TTFB</th></tr>
+          (p) => `<h3>${{ load: 'Load test', soak: 'Soak test (browsers)' }[p.name] ?? 'Smoke test'} <span class="muted">· ${p.when.toLocaleString('en-GB')}</span></h3>
+${
+  p.name === 'soak'
+    ? `<table><tr><th>Visits</th><th>Checks passed</th><th>Max visitors</th><th>LCP p75</th><th>Tab switch p95</th><th>Photo open p95</th></tr>
+<tr><td>${p.metrics.iterations?.values.count ?? '—'}</td><td>${((p.metrics.checks?.values.rate ?? 0) * 100).toFixed(1)}%</td>
+<td>${p.metrics.vus_max?.values.max ?? '—'}</td><td>${ms(p.metrics.browser_web_vital_lcp?.values['p(75)'])}</td>
+<td>${ms(p.metrics.tab_switch?.values['p(95)'])}</td><td>${ms(p.metrics.photo_open?.values['p(95)'])}</td></tr></table>`
+    : `<table><tr><th>Requests</th><th>Failed</th><th>Checks passed</th><th>Max visitors</th><th>p95 all requests</th><th>p95 page TTFB</th></tr>
 <tr><td>${p.metrics.http_reqs?.values.count ?? '—'}</td><td>${((p.metrics.http_req_failed?.values.rate ?? 0) * 100).toFixed(2)}%</td>
 <td>${((p.metrics.checks?.values.rate ?? 0) * 100).toFixed(1)}%</td><td>${p.metrics.vus_max?.values.max ?? '—'}</td>
-<td>${ms(p.metrics.http_req_duration?.values['p(95)'])}</td><td>${ms(p.metrics.page_ttfb?.values['p(95)'])}</td></tr></table>
+<td>${ms(p.metrics.http_req_duration?.values['p(95)'])}</td><td>${ms(p.metrics.page_ttfb?.values['p(95)'])}</td></tr></table>`
+}
 <table style="margin-top:6px"><tr><th>Threshold</th><th>Rule</th><th>Result</th></tr>
 ${p.thresholds.map((t) => `<tr><td>${esc(t.metric)}</td><td>${esc(t.rule)}</td><td class="${t.ok ? 'ok' : 'bad'}">${t.ok ? 'passed' : 'FAILED'}</td></tr>`).join('')}</table>`,
         )

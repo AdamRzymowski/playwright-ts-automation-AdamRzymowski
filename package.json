@@ -28,6 +28,7 @@
     "export:testiny": "node tools/export-testiny-csv.mjs",
     "perf:smoke": "cross-env K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_OPEN=false K6_WEB_DASHBOARD_EXPORT=reports/k6-smoke-report.html k6 run perf/smoke.ts",
     "perf:load": "cross-env K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_OPEN=false K6_WEB_DASHBOARD_EXPORT=reports/k6-load-report.html k6 run perf/load.ts",
+    "perf:soak": "cross-env \"K6_BROWSER_ARGS=host-resolver-rules=MAP fonts.g* ~NOTFOUND\" K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_OPEN=false K6_WEB_DASHBOARD_EXPORT=reports/k6-soak-report.html k6 run perf/soak.ts",
     "tests": "node tools/run-tests.mjs",
     "test:ui-only": "playwright test --grep-invert @a11y",
     "report:pdf": "node tools/report-pdf.mjs",
