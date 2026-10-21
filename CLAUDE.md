@@ -12,10 +12,13 @@ and KNOWN-ISSUES.md for open site bugs.
 - Test titles are a brief, self-contained description of what is checked (e.g. "Quantity 0 is rejected").
 
 ## Accessibility (always)
-- **Check every change against the `wcag-check` skill** (`.claude/skills/wcag-check/SKILL.md`, WCAG 2.2 AA)
-  before committing. That covers changes to the site (`../Substandard-Monsters`), tests that touch page
-  behaviour, and pages or reports this project generates.
-- Report which criteria the change touches and the result of each. Log site failures in KNOWN-ISSUES.md with
+- **Check every UI change against the `wcag-check` skill** (`.claude/skills/wcag-check/SKILL.md`, WCAG 2.2 AA)
+  before committing. A UI change is anything that changes what people see or interact with:
+  - the site's pages, styles and page scripts (`../Substandard-Monsters`);
+  - HTML pages this project generates, such as the Allure "by browser" index.
+
+  Test code, configs, scripts and docs are not UI changes.
+- Report which criteria the UI change touches and the result of each. Log site failures in KNOWN-ISSUES.md with
   the WCAG criterion number.
 - Running the accessibility tests against a site still follows "Ask before running".
 

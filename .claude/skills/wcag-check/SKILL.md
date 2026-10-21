@@ -1,6 +1,6 @@
 ---
 name: wcag-check
-description: WCAG 2.2 level AA accessibility checklist (covers WCAG 2.0 and 2.1 too) for the Substandard Monsters website and anything this test project shows to people. Use for EVERY change before it is committed - site HTML/CSS/JS in ../Substandard-Monsters, new or changed tests that touch page behaviour, and generated pages or reports (Allure index, PDF, k6 report). Walks through the four WCAG principles (Perceivable, Operable, Understandable, Robust), says which criteria the change touches, how to check each one (automated axe tests in this repo plus quick manual checks), and how to report and log failures.
+description: WCAG 2.2 level AA accessibility checklist (covers WCAG 2.0 and 2.1 too) for the Substandard Monsters website and anything this test project shows to people. Use for EVERY UI change before it is committed - anything that changes what people see or interact with: the site's HTML/CSS/page scripts in ../Substandard-Monsters, and HTML pages this project generates (e.g. the Allure by-browser index). Not needed for test code, configs, scripts or docs. Walks through the four WCAG principles (Perceivable, Operable, Understandable, Robust), says which criteria the change touches, how to check each one (automated axe tests in this repo plus quick manual checks), and how to report and log failures.
 ---
 
 # WCAG check
@@ -17,7 +17,8 @@ WCAG is built on four principles, **POUR**. Content must be:
 - **Understandable:** it is clear and predictable;
 - **Robust:** it works with assistive technology such as screen readers.
 
-Use it on every change (CLAUDE.md "Accessibility"). It complements, but doesn't replace, the automated tests:
+Use it on every **UI change**, meaning anything that changes what people see or interact with on the site
+or on a page this project generates (CLAUDE.md "Accessibility"). It complements, but doesn't replace, the automated tests:
 - `tests/monsters/e2e/accessibility.spec.ts` and `tests/monsters/mobile/accessibility.spec.ts`, tagged `@a11y`;
 - `tests/monsters/e2e/contrast.spec.ts`;
 - the axe helper `tests/utils/a11y.ts`.

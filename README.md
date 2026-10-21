@@ -187,7 +187,7 @@ report you generate.
 - **Adding a test:** Claude follows the `test-creation-template` skill (`.claude/skills/`), required by
   CLAUDE.md: placement, a brief self-describing title, the code template, running it on every browser, the
   matching manual case and any known issue.
-- **Accessibility check:** every change is checked against the `wcag-check` skill
+- **Accessibility check:** every UI change (site pages, styles, page scripts; generated HTML pages) is checked against the `wcag-check` skill
   (`.claude/skills/wcag-check/`, WCAG 2.2 AA). The skill lists:
   - which criteria a change touches;
   - how to check each one (the `@a11y` tests plus manual checks);
