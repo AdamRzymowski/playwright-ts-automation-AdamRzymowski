@@ -79,7 +79,10 @@ export default async function () {
     await think(page);
 
     // 3. Click every gallery tab, then the sub-tabs, in random order
-    for (const tab of shuffle(TABS)) await openTab(page, `gallery-tab-${tab}`, tab === 'painting' ? null : tab);
+    const tabs = shuffle(TABS);
+    for (const tab of tabs) await openTab(page, `gallery-tab-${tab}`, tab === 'painting' ? null : tab);
+    // The Miniatures / Terrain sub-tabs only show while "Miniatures and Terrain" (painting) is open.
+    if (tabs[tabs.length - 1] !== 'painting') await openTab(page, 'gallery-tab-painting', null);
     for (const sub of shuffle(SUBTABS)) await openTab(page, `gallery-subtab-${sub}`, sub);
 
     // 4. Open a random photo of the visible gallery, then close it with Escape
