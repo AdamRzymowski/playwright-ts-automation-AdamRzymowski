@@ -1,0 +1,111 @@
+# Automated checks on GitHub Actions.
+#   Every push to main and every pull request:
+#     1. check  - type-check + lint (no site access)
+#     2. smoke  - @smoke UI tests on Chrome, desktop and phone view, against the live site
+#   Every night (02:00 UTC) and on demand (Actions tab > Tests > Run workflow):
+#     3. regression - all UI tests, each browser separately at desktop and phone size, against the live site
+# Live runs upload to Testiny when the TESTINY_API_KEY and TESTINY_PROJECT secrets are set, named
+# <DD.MM.YY>-live-ci-<run number> (e.g. 22.10.26-live-ci-57). Reports are kept as downloadable artifacts.
+# Never runs: real form submissions (they email the owner), k6 performance tests, BrowserStack.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      browsers:
+        description: 'Browsers for the regression run'
+        type: choice
+        options: ['desktop,mobile', 'desktop', 'mobile']
+        default: desktop,mobile
+
+concurrency:
+  group: tests-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  MONSTERS_ENV: live
+  CI: 'true'
+  # Testiny (optional): add these in GitHub > Settings > Secrets and variables > Actions.
+  TESTINY_API_KEY: ${{ secrets.TESTINY_API_KEY }}
+  TESTINY_PROJECT: ${{ secrets.TESTINY_PROJECT }}
+
+jobs:
+  check:
+    name: Type-check and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+
+  smoke:
+    name: Smoke tests (live)
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Testiny run name
+        if: env.TESTINY_API_KEY != '' && env.TESTINY_PROJECT != ''
+        run: |
+          echo "TESTINY_UPLOAD=1" >> "$GITHUB_ENV"
+          echo "TESTINY_RUN_NAME=$(date -u +%d.%m.%y)-live-ci-${{ github.run_number }}" >> "$GITHUB_ENV"
+      - name: Smoke tests on Chrome (desktop + phone view)
+        run: npx playwright test --grep @smoke --grep-invert @a11y --project=chromium --project=mobile-chrome
+      - name: Allure report
+        if: always()
+        run: npx allure generate allure-results --output allure-report --name "Smoke tests (CI ${{ github.run_number }})"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-reports-${{ github.run_number }}
+          path: |
+            allure-report/
+            playwright-report/
+          retention-days: 14
+
+  regression:
+    name: Full UI regression (live)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox msedge
+      - name: Testiny run name
+        run: echo "TESTINY_RUN_NAME=$(date -u +%d.%m.%y)-live-ci-${{ github.run_number }}" >> "$GITHUB_ENV"
+      - name: All UI tests, one browser at a time (Allure report + PDF per browser)
+        # The runner uploads live runs to Testiny when the secrets are set, all browsers in one run.
+        run: node tools/run-tests.mjs --suite=ui --env=live --browsers=${{ inputs.browsers || 'desktop,mobile' }} --no-report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-reports-${{ github.run_number }}
+          path: |
+            allure-report/
+            reports/*.pdf
+            reports/*.md
+          retention-days: 30

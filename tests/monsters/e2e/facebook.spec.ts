@@ -19,8 +19,8 @@ test.describe('Facebook links', () => {
       await s.goto();
       const pageUrl = page.url();
 
+      await expect(s.facebookLinks, 'contact button + footer link').toHaveCount(2);
       const count = await s.facebookLinks.count();
-      expect(count, 'contact button + footer link').toBe(2);
 
       for (let i = 0; i < count; i++) {
         await test.step(`link ${i + 1}: "${(await s.facebookLinks.nth(i).innerText()).trim()}"`, async () => {

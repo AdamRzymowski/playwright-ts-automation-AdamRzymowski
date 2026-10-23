@@ -13,10 +13,10 @@ test.describe('Gallery', () => {
   test('Resin gallery is shown by default', async ({ site }) => {
     await site.goto();
 
-    await expect(site.tab('resin')).toHaveClass(/\bactive\b/);
-    await expect(site.galleries.filter({ visible: true })).toHaveCount(1);
-    await expect(site.gallery('resin')).toBeVisible();
-    await expect(site.subtabRow).toBeHidden();
+    await expect(site.gallery.tab('resin')).toHaveClass(/\bactive\b/);
+    await expect(site.gallery.panels.filter({ visible: true })).toHaveCount(1);
+    await expect(site.gallery.panel('resin')).toBeVisible();
+    await expect(site.gallery.subtabRow).toBeHidden();
   });
 
   test('Each gallery tab shows only its own photos', { tag: ['@smoke'] }, async ({ site }) => {
@@ -25,11 +25,11 @@ test.describe('Gallery', () => {
 
     for (const name of TOP_TABS) {
       await test.step(`open ${name}`, async () => {
-        await site.tab(name).click();
-        await expect.soft(site.tab(name)).toHaveClass(/\bactive\b/);
-        await expect.soft(site.tabs.and(site.page.locator('.active'))).toHaveCount(1);
-        await expect.soft(site.visibleGallery()).toHaveAttribute('data-gallery', name);
-        await expect.soft(site.visibleGallery().locator('.gallery-item')).not.toHaveCount(0);
+        await site.gallery.tab(name).click();
+        await expect.soft(site.gallery.tab(name)).toHaveClass(/\bactive\b/);
+        await expect.soft(site.gallery.activeTab).toHaveCount(1);
+        await expect.soft(site.gallery.visiblePanel()).toHaveAttribute('data-gallery', name);
+        await expect.soft(site.gallery.visibleItems()).not.toHaveCount(0);
       });
     }
   });
@@ -38,24 +38,24 @@ test.describe('Gallery', () => {
     await site.goto();
 
     await test.step('painting opens Miniatures first', async () => {
-      await site.tab('painting').click();
-      await expect(site.subtabRow).toBeVisible();
-      await expect(site.tab('miniatures')).toHaveClass(/\bactive\b/);
-      await expect(site.visibleGallery()).toHaveAttribute('data-gallery', 'miniatures');
+      await site.gallery.tab('painting').click();
+      await expect(site.gallery.subtabRow).toBeVisible();
+      await expect(site.gallery.tab('miniatures')).toHaveClass(/\bactive\b/);
+      await expect(site.gallery.visiblePanel()).toHaveAttribute('data-gallery', 'miniatures');
     });
 
     await test.step('switch to Terrain', async () => {
-      await site.tab('terrain').click();
-      await expect(site.tab('painting')).toHaveClass(/\bactive\b/);
-      await expect(site.tab('terrain')).toHaveClass(/\bactive\b/);
-      await expect(site.visibleGallery()).toHaveAttribute('data-gallery', 'terrain');
+      await site.gallery.tab('terrain').click();
+      await expect(site.gallery.tab('painting')).toHaveClass(/\bactive\b/);
+      await expect(site.gallery.tab('terrain')).toHaveClass(/\bactive\b/);
+      await expect(site.gallery.visiblePanel()).toHaveAttribute('data-gallery', 'terrain');
     });
 
     await test.step('leave and come back: Terrain is still selected', async () => {
-      await site.tab('fdm').click();
-      await expect(site.subtabRow).toBeHidden();
-      await site.tab('painting').click();
-      await expect(site.visibleGallery()).toHaveAttribute('data-gallery', 'terrain');
+      await site.gallery.tab('fdm').click();
+      await expect(site.gallery.subtabRow).toBeHidden();
+      await site.gallery.tab('painting').click();
+      await expect(site.gallery.visiblePanel()).toHaveAttribute('data-gallery', 'terrain');
     });
   });
 
@@ -65,7 +65,7 @@ test.describe('Gallery', () => {
       await site.serviceCard(name).click();
 
       const expected = name === 'painting' ? 'miniatures' : name;
-      await expect(site.visibleGallery()).toHaveAttribute('data-gallery', expected);
+      await expect(site.gallery.visiblePanel()).toHaveAttribute('data-gallery', expected);
       await expect(page).toHaveURL(new RegExp(`#gallery-${name}$`));
       await expect(site.section('gallery')).toBeInViewport();
     });
@@ -74,21 +74,21 @@ test.describe('Gallery', () => {
   test('Link to #gallery-fdm opens the FDM gallery', async ({ site }) => {
     await site.goto('#gallery-fdm');
 
-    await expect(site.tab('fdm')).toHaveClass(/\bactive\b/);
-    await expect(site.visibleGallery()).toHaveAttribute('data-gallery', 'fdm');
+    await expect(site.gallery.tab('fdm')).toHaveClass(/\bactive\b/);
+    await expect(site.gallery.visiblePanel()).toHaveAttribute('data-gallery', 'fdm');
     await expect(site.section('gallery')).toBeInViewport();
   });
 
   test('Every gallery photo has alt text and a caption', async ({ site }) => {
     await site.goto();
-    const items = site.page.locator('.gallery-item');
+    const items = site.gallery.allItems;
     const count = await items.count();
     expect(count).toBeGreaterThan(0);
 
     for (let i = 0; i < count; i++) {
       const item = items.nth(i);
-      await expect.soft(item.locator('img')).toHaveAttribute('alt', /\S/);
-      await expect.soft(item.locator('figcaption')).not.toBeEmpty();
+      await expect.soft(site.gallery.imageOf(item)).toHaveAttribute('alt', /\S/);
+      await expect.soft(site.gallery.captionOf(item)).not.toBeEmpty();
     }
   });
 
@@ -100,43 +100,43 @@ test.describe('Gallery', () => {
     test('Clicking a photo enlarges it with its caption', async ({ site }) => {
       // Miniatures has many photos; the default Resin gallery may hold only one.
       await site.goto('#gallery');
-      await site.tab('painting').click();
-      const item = site.gallery('miniatures').locator('.gallery-item').nth(1);
-      const src = await item.locator('img').getAttribute('src');
-      const caption = await item.locator('figcaption').textContent();
+      await site.gallery.tab('painting').click();
+      const item = site.gallery.items('miniatures').nth(1);
+      const src = await site.gallery.imageOf(item).getAttribute('src');
+      const caption = await site.gallery.captionOf(item).textContent();
 
       await item.click();
 
-      await expect(site.lightbox).toBeVisible();
-      await expect(site.lightboxImage).toHaveAttribute('src', new RegExp(`${src}$`));
-      await expect(site.lightboxCaption).toHaveText(caption!);
+      await expect(site.lightbox.root).toBeVisible();
+      await expect(site.lightbox.image).toHaveAttribute('src', new RegExp(`${src}$`));
+      await expect(site.lightbox.caption).toHaveText(caption!);
     });
 
     test('Enlarged photo closes with Escape, × or backdrop', async ({ page, site }) => {
       await site.goto();
-      const first = site.gallery('resin').locator('.gallery-item').first();
+      const first = site.gallery.items('resin').first();
 
       await test.step('Escape', async () => {
         await first.click();
         await page.keyboard.press('Escape');
-        await expect(site.lightbox).toBeHidden();
+        await expect(site.lightbox.root).toBeHidden();
       });
 
       await test.step('close button', async () => {
         await first.click();
-        await site.lightboxClose.click();
-        await expect(site.lightbox).toBeHidden();
+        await site.lightbox.closeButton.click();
+        await expect(site.lightbox.root).toBeHidden();
       });
 
       await test.step('clicking the photo keeps it open', async () => {
         await first.click();
-        await site.lightboxImage.click();
-        await expect(site.lightbox).toBeVisible();
+        await site.lightbox.image.click();
+        await expect(site.lightbox.root).toBeVisible();
       });
 
       await test.step('backdrop', async () => {
-        await site.lightbox.click({ position: { x: 10, y: 10 } });
-        await expect(site.lightbox).toBeHidden();
+        await site.lightbox.root.click({ position: { x: 10, y: 10 } });
+        await expect(site.lightbox.root).toBeHidden();
       });
     });
   });

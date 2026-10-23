@@ -1,0 +1,15 @@
+{
+  // k6 scripts: k6 runs them itself; this is for type-checking only (npm run typecheck).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["k6"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["**/*.ts"]
+}

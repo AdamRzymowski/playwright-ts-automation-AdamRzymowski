@@ -35,10 +35,10 @@ test.describe('Real form submission', () => {
     await allure.attachment('request.json', JSON.stringify(request, null, 2), 'application/json');
 
     await site.goto('#contact');
-    await site.fillRequest(request);
+    await site.form.fill(request);
     const started = Date.now();
     const responsePromise = page.waitForResponse(FORMSUBMIT, { timeout: 120_000 });
-    await site.submitButton.click();
+    await site.form.submitButton.click();
     const response = await responsePromise;
     const ms = Date.now() - started;
     await allure.parameter('FormSubmit reply time (ms)', String(ms));
@@ -52,10 +52,10 @@ test.describe('Real form submission', () => {
 
     await test.step('Request the browser sent', async () => {
       expect.soft(sent.method()).toBe('POST');
-      expect.soft(sent.url()).toBe(await site.form.getAttribute('action'));
+      expect.soft(sent.url()).toBe(await site.form.root.getAttribute('action'));
       expect.soft(sent.headers()['accept']).toBe('application/json');
       const payload = sent.postDataBuffer()?.toString('utf8') ?? '';
-      expect.soft(payload).toContain(site.expectedSubject(request));
+      expect.soft(payload).toContain(site.form.expectedSubject(request));
       expect.soft(payload).toContain(REAL_SUBMIT_EMAIL);
       expect.soft(payload).toContain('English');
     });
@@ -71,10 +71,10 @@ test.describe('Real form submission', () => {
     });
 
     await test.step('Page shows the success state', async () => {
-      await expect(site.formStatus).toHaveText(site.labels.ok);
-      await expect(site.formStatus).toHaveClass(/\bok\b/);
-      await expect(site.field('Name')).toHaveValue('');
-      await expect(site.submitButton).toBeEnabled();
+      await expect(site.form.status).toHaveText(site.labels.ok);
+      await expect(site.form.status).toHaveClass(/\bok\b/);
+      await expect(site.form.field('Name')).toHaveValue('');
+      await expect(site.form.submitButton).toBeEnabled();
     });
   });
 });

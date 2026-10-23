@@ -130,6 +130,8 @@ White text on Facebook blue (`#1877f2`) has a contrast ratio of **4.23:1**; WCAG
 
 **Automated tests:** `tests/monsters/e2e/contrast.spec.ts` (page readability) and
 `tests/monsters/e2e/accessibility.spec.ts` (axe scans).
+The two page-readability tests are marked `knownIssue('KI-004')`: they are expected to fail until this is
+fixed, and turn red ("expected to fail, but passed") once it is.
 
 ---
 
@@ -275,6 +277,7 @@ background with white text (e.g. `#c62828` gives about 5.6:1).
 
 **Automated tests:** `tests/monsters/e2e/contrast.spec.ts`, "Form error badges and message have enough
 contrast" (fails on every browser).
+Marked `knownIssue('KI-011')`: expected to fail until this is fixed.
 
 ---
 

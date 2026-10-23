@@ -3,6 +3,7 @@ import * as allure from 'allure-js-commons';
 import { test, expect, FORMSUBMIT } from '../../../fixtures/monsters';
 import { createPrintRequest } from '../../utils/testData';
 import { formatViolations } from '../../utils/a11y';
+import { knownIssue } from '../../utils/knownIssues';
 
 // Readability: is every piece of text clearly visible against what is behind it?
 // Uses axe-core's colour-contrast check (WCAG 1.4.3): at least 4.5:1 for normal text, 3:1 for large text.
@@ -37,46 +38,49 @@ test.describe('Text colour contrast (readability)', () => {
   });
 
   test('English page text has enough contrast', { tag: ['@smoke'] }, async ({ page, site }) => {
+    await knownIssue('KI-004');
     await allure.severity(allure.Severity.CRITICAL);
     await site.goto();
     await checkContrast(page, 'English page');
   });
 
   test('Polish page text has enough contrast', async ({ page, sitePl }) => {
+    await knownIssue('KI-004');
     await sitePl.goto();
     await checkContrast(page, 'Polish page');
   });
 
   test('Open menu text has enough contrast', async ({ page, site }) => {
     await site.goto();
-    await site.openMenuIfCollapsed();
-    await expect(site.navLink('gallery')).toBeVisible();
+    await site.header.openMenuIfCollapsed();
+    await expect(site.header.navLink('gallery')).toBeVisible();
     await checkContrast(page, 'header and menu', '[data-testid="header"]');
   });
 
   for (const tab of ['resin', 'fdm', 'design', 'painting'] as const) {
     test(`Gallery "${tab}" tab and captions have enough contrast`, async ({ page, site }) => {
       await site.goto('#gallery');
-      await site.tab(tab).click();
+      await site.gallery.tab(tab).click();
       await checkContrast(page, `gallery ${tab}`, '[data-testid="gallery"]');
     });
   }
 
   test('Enlarged photo caption has enough contrast', async ({ page, site }) => {
     await site.goto('#gallery');
-    await site.tab('painting').click();
-    await site.visibleGallery().locator('.gallery-item').first().click();
-    await expect(site.lightbox).toBeVisible();
+    await site.gallery.tab('painting').click();
+    await site.gallery.visibleItems().first().click();
+    await expect(site.lightbox.root).toBeVisible();
     await checkContrast(page, 'lightbox', '[data-testid="lightbox"]');
   });
 
   test('Form error badges and message have enough contrast', async ({ page, site }) => {
+    await knownIssue('KI-011');
     await allure.severity(allure.Severity.CRITICAL);
     await page.route(FORMSUBMIT, (route) => route.abort());
     await site.goto('#contact');
-    await site.submitButton.click();
-    await expect(site.formStatus).toHaveText(site.labels.fix);
-    await expect(site.fieldError('Name')).toBeVisible();
+    await site.form.submitButton.click();
+    await expect(site.form.status).toHaveText(site.labels.fix);
+    await expect(site.form.fieldError('Name')).toBeVisible();
     await checkContrast(page, 'form with error badges', '[data-testid="request-form"]');
   });
 
@@ -88,25 +92,25 @@ test.describe('Text colour contrast (readability)', () => {
       await route.fulfill({ json: { success: 'true' } });
     });
     await site.goto('#contact');
-    await site.fillRequest(createPrintRequest());
-    await site.submitButton.click();
+    await site.form.fill(createPrintRequest());
+    await site.form.submitButton.click();
 
     await test.step('Sending…', async () => {
-      await expect(site.formStatus).toHaveText(site.labels.sending);
+      await expect(site.form.status).toHaveText(site.labels.sending);
       await checkContrast(page, 'form sending', '[data-testid="request-form"]');
     });
 
     await test.step('Thank-you message', async () => {
       release();
-      await expect(site.formStatus).toHaveText(site.labels.ok);
+      await expect(site.form.status).toHaveText(site.labels.ok);
       await checkContrast(page, 'form sent', '[data-testid="request-form"]');
     });
   });
 
   test('Description counter warning has enough contrast', async ({ page, site }) => {
     await site.goto('#contact');
-    await site.field('Description').fill('x'.repeat(950));
-    await expect(site.descriptionCounter).toHaveClass(/near-limit/);
+    await site.form.field('Description').fill('x'.repeat(950));
+    await expect(site.form.descriptionCounter).toHaveClass(/near-limit/);
     await checkContrast(page, 'counter near limit', '[data-testid="request-form"]');
   });
 });

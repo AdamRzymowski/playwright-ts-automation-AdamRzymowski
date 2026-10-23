@@ -26,6 +26,7 @@ const MOBILE_SPECS = /[\\/]mobile[\\/].*\.spec\.ts$/;
 const BS_USER = process.env.BROWSERSTACK_USERNAME;
 const BS_KEY = process.env.BROWSERSTACK_ACCESS_KEY;
 const BS_BUILD = process.env.BROWSERSTACK_BUILD_NAME ?? `Playwright TS Automation ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- package.json is not an ES module export
 const PW_VERSION: string = require('@playwright/test/package.json').version;
 function browserstack(browser: 'playwright-webkit' | 'chrome') {
   const caps = {
@@ -94,12 +95,19 @@ const testiny: ReporterDescription[] = process.env.TESTINY_UPLOAD
 export default defineConfig({
   testDir: './tests',
   globalSetup: './global-setup.ts',
+  /* Per-test limit (Playwright's default, made explicit) and the default wait of each expect(). */
+  timeout: 30_000,
+  expect: { timeout: 5_000 },
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
+  /*
+   * Retries: the live and dev sites are on the internet, where one slow page load is normal. One retry there
+   * (two on CI) means a test that passes on its second try is reported as "flaky", not failed.
+   * The local copy gets no retries, so real failures show at once. RETRIES=n overrides.
+   */
+  retries: process.env.RETRIES ? Number(process.env.RETRIES) : process.env.CI ? 2 : MONSTERS_IS_LOCAL ? 0 : 1,
   /* Parallel workers: Playwright picks half the CPU cores locally; cap it on CI. */
   workers: process.env.CI ? 4 : undefined,
   /* list = console output, html = Playwright report, allure = graphical dashboard (npm run allure) */
@@ -129,6 +137,12 @@ export default defineConfig({
     baseURL: MONSTERS_URL,
     /* The site marks elements with data-testid="...", which getByTestId() reads. */
     testIdAttribute: 'data-testid',
+    /*
+     * Explicit limits, so a slow page fails with a clear message instead of using up the whole 30 s test
+     * timeout: one click/fill at most 15 s, one page load at most 30 s. Assertions wait up to 5 s (expect.timeout).
+     */
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
     /* Headless by default; HEADED=1 / --headed (npm run tests asks) shows the browser windows. */
     headless: !process.env.HEADED,
     /*

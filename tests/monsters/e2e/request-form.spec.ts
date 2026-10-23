@@ -17,21 +17,21 @@ test.describe('Request form', () => {
     await allure.severity(allure.Severity.CRITICAL);
 
     for (const field of ['Name', 'email', 'Service', 'Quantity', 'File link', 'Description'] as FormField[]) {
-      await expect.soft(site.field(field), field).toBeVisible();
-      await expect.soft(site.field(field), field).toBeEditable();
+      await expect.soft(site.form.field(field), field).toBeVisible();
+      await expect.soft(site.form.field(field), field).toBeEditable();
     }
     for (const required of ['Name', 'email', 'Service', 'Description'] as FormField[]) {
-      await expect.soft(site.field(required), `${required} is required`).toHaveAttribute('required', '');
+      await expect.soft(site.form.field(required), `${required} is required`).toHaveAttribute('required', '');
     }
     for (const optional of ['Quantity', 'File link'] as FormField[]) {
-      await expect.soft(site.field(optional), `${optional} is optional`).not.toHaveAttribute('required');
+      await expect.soft(site.form.field(optional), `${optional} is optional`).not.toHaveAttribute('required');
     }
-    await expect.soft(site.field('Quantity')).toHaveValue('1');
-    await expect.soft(site.field('Quantity')).toHaveAttribute('min', '1');
-    await expect.soft(site.field('Description')).toHaveAttribute('data-min-words', '5');
-    await expect.soft(site.requiredNote).toHaveText(site.labels.requiredNote);
-    await expect.soft(site.submitButton).toHaveText(site.labels.submit);
-    await expect.soft(site.formStatus).toBeEmpty();
+    await expect.soft(site.form.field('Quantity')).toHaveValue('1');
+    await expect.soft(site.form.field('Quantity')).toHaveAttribute('min', '1');
+    await expect.soft(site.form.field('Description')).toHaveAttribute('data-min-words', '5');
+    await expect.soft(site.form.requiredNote).toHaveText(site.labels.requiredNote);
+    await expect.soft(site.form.submitButton).toHaveText(site.labels.submit);
+    await expect.soft(site.form.status).toBeEmpty();
   });
 
   test('Complete request sends every field and thanks the visitor', { tag: ['@smoke'] }, async ({ page, site }) => {
@@ -45,16 +45,16 @@ test.describe('Request form', () => {
       await route.fulfill({ json: { success: 'true', message: 'The form was submitted successfully.' } });
     });
 
-    await site.fillRequest(request);
-    await site.submitButton.click();
+    await site.form.fill(request);
+    await site.form.submitButton.click();
 
     await test.step('user sees confirmation and a cleared form', async () => {
-      await expect(site.formStatus).toHaveText(site.labels.ok);
-      await expect(site.formStatus).toHaveClass(/\bok\b/);
-      await expect(site.field('Name')).toHaveValue('');
-      await expect(site.field('Description')).toHaveValue('');
-      await expect(site.field('Quantity')).toHaveValue('1');
-      await expect(site.submitButton).toBeEnabled();
+      await expect(site.form.status).toHaveText(site.labels.ok);
+      await expect(site.form.status).toHaveClass(/\bok\b/);
+      await expect(site.form.field('Name')).toHaveValue('');
+      await expect(site.form.field('Description')).toHaveValue('');
+      await expect(site.form.field('Quantity')).toHaveValue('1');
+      await expect(site.form.submitButton).toBeEnabled();
     });
 
     await test.step('FormSubmit received the right data', async () => {
@@ -66,7 +66,7 @@ test.describe('Request form', () => {
       expect.soft(sent['File link']).toBe(request.fileLink);
       expect.soft(sent.Description).toBe(request.description);
       expect.soft(sent.Language).toBe('English');
-      expect.soft(sent._subject).toBe(site.expectedSubject(request));
+      expect.soft(sent._subject).toBe(site.form.expectedSubject(request));
       expect.soft(sent._template).toBe('box');
       expect.soft(sent._captcha).toBe('false');
       expect.soft(sent._honey).toBe('');
@@ -81,32 +81,32 @@ test.describe('Request form', () => {
     });
     const request = createPrintRequest();
 
-    await site.field('Name').fill(request.name);
-    await site.field('email').fill(request.email);
-    await site.field('Service').selectOption(request.service);
-    await site.field('Description').fill(request.description);
-    await site.submitButton.click();
+    await site.form.field('Name').fill(request.name);
+    await site.form.field('email').fill(request.email);
+    await site.form.field('Service').selectOption(request.service);
+    await site.form.field('Description').fill(request.description);
+    await site.form.submitButton.click();
 
-    await expect(site.formStatus).toHaveText(site.labels.ok);
+    await expect(site.form.status).toHaveText(site.labels.ok);
     expect.soft(sent.Quantity).toBe('1');
     expect.soft(sent['File link']).toBe('');
   });
 
   test('Form posts to its FormSubmit address', async ({ page, site }) => {
     await allure.severity(allure.Severity.BLOCKER);
-    const action = await site.form.getAttribute('action');
+    const action = await site.form.root.getAttribute('action');
     expect(action).toMatch(/^https:\/\/formsubmit\.co\/ajax\/\S+/);
 
     const requestPromise = page.waitForRequest(FORMSUBMIT);
     await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
-    await site.fillRequest(createPrintRequest());
-    await site.submitButton.click();
+    await site.form.fill(createPrintRequest());
+    await site.form.submitButton.click();
 
     const request = await requestPromise;
     expect.soft(request.url()).toBe(action);
     expect.soft(request.method()).toBe('POST');
     expect.soft(request.headers()['accept']).toBe('application/json');
-    await expect(site.formStatus).toHaveText(site.labels.ok);
+    await expect(site.form.status).toHaveText(site.labels.ok);
   });
 
   test.describe('Validation', () => {
@@ -125,7 +125,7 @@ test.describe('Request form', () => {
         return route.abort();
       });
 
-      await site.submitButton.click();
+      await site.form.submitButton.click();
 
       const b = site.labels.badges;
       const expected: [FormField, string][] = [
@@ -135,10 +135,10 @@ test.describe('Request form', () => {
         ['Description', b.descriptionMissing],
       ];
       for (const [field, message] of expected) {
-        await expect.soft(site.fieldError(field), field).toHaveText(message);
-        await expect.soft(site.field(field), field).toHaveAttribute('aria-invalid', 'true');
+        await expect.soft(site.form.fieldError(field), field).toHaveText(message);
+        await expect.soft(site.form.field(field), field).toHaveAttribute('aria-invalid', 'true');
       }
-      await expect(site.formStatus).toHaveText(site.labels.fix);
+      await expect(site.form.status).toHaveText(site.labels.fix);
       expect(calls).toBe(0);
     });
 
@@ -149,17 +149,17 @@ test.describe('Request form', () => {
           calls++;
           return route.abort();
         });
-        await site.fillRequest(createPrintRequest());
-        if (missing === 'Service') await site.field('Service').selectOption('');
-        else await site.field(missing).fill('');
+        await site.form.fill(createPrintRequest());
+        if (missing === 'Service') await site.form.field('Service').selectOption('');
+        else await site.form.field(missing).fill('');
 
-        await site.submitButton.click();
+        await site.form.submitButton.click();
 
-        await expect(site.fieldError(missing)).toBeVisible();
-        await expect(site.field(missing)).toHaveAttribute('aria-invalid', 'true');
+        await expect(site.form.fieldError(missing)).toBeVisible();
+        await expect(site.form.field(missing)).toHaveAttribute('aria-invalid', 'true');
         // Only the missing field is flagged.
         for (const other of (['Name', 'email', 'Service', 'Description'] as FormField[]).filter((f) => f !== missing)) {
-          await expect.soft(site.field(other), other).not.toHaveAttribute('aria-invalid', 'true');
+          await expect.soft(site.form.field(other), other).not.toHaveAttribute('aria-invalid', 'true');
         }
         expect(calls).toBe(0);
       });
@@ -172,10 +172,10 @@ test.describe('Request form', () => {
         return route.abort();
       });
 
-      await site.fillRequest(createPrintRequest({ email: 'not-an-email' }));
-      await site.submitButton.click();
+      await site.form.fill(createPrintRequest({ email: 'not-an-email' }));
+      await site.form.submitButton.click();
 
-      await expect(site.fieldError('email')).toHaveText(site.labels.badges.emailInvalid);
+      await expect(site.form.fieldError('email')).toHaveText(site.labels.badges.emailInvalid);
       expect(calls).toBe(0);
     });
 
@@ -186,22 +186,22 @@ test.describe('Request form', () => {
         return route.abort();
       });
 
-      await site.fillRequest(createPrintRequest({ quantity: 0 }));
-      await site.submitButton.click();
+      await site.form.fill(createPrintRequest({ quantity: 0 }));
+      await site.form.submitButton.click();
 
-      await expect(site.fieldError('Quantity')).toHaveText(site.labels.badges.quantity);
+      await expect(site.form.fieldError('Quantity')).toHaveText(site.labels.badges.quantity);
       expect(calls).toBe(0);
     });
 
     test('Error badge clears once the field is fixed', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.abort());
-      await site.submitButton.click();
-      await expect(site.fieldError('Name')).toBeVisible();
+      await site.form.submitButton.click();
+      await expect(site.form.fieldError('Name')).toBeVisible();
 
-      await site.field('Name').fill('Anna Nowak');
+      await site.form.field('Name').fill('Anna Nowak');
 
-      await expect(site.fieldError('Name')).toBeHidden();
-      await expect(site.field('Name')).toHaveAttribute('aria-invalid', 'false');
+      await expect(site.form.fieldError('Name')).toBeHidden();
+      await expect(site.form.field('Name')).toHaveAttribute('aria-invalid', 'false');
     });
 
     test('Description needs at least 5 words', { tag: ['@smoke'] }, async ({ page, site }) => {
@@ -211,32 +211,32 @@ test.describe('Request form', () => {
         calls++;
         return route.fulfill({ json: { success: true } });
       });
-      await site.fillRequest(createPrintRequest({ description: words(4) }));
+      await site.form.fill(createPrintRequest({ description: words(4) }));
 
       await test.step('4 words: blocked with a clear message', async () => {
-        await site.submitButton.click();
-        await expect(site.fieldError('Description')).toHaveText(site.labels.badges.minWords);
+        await site.form.submitButton.click();
+        await expect(site.form.fieldError('Description')).toHaveText(site.labels.badges.minWords);
         expect(calls).toBe(0);
       });
 
       await test.step('extra spaces do not count as words', async () => {
-        await site.field('Description').fill(`  ${words(2)}     ${words(2)}   `);
-        await site.submitButton.click();
-        await expect(site.fieldError('Description')).toHaveText(site.labels.badges.minWords);
+        await site.form.field('Description').fill(`  ${words(2)}     ${words(2)}   `);
+        await site.form.submitButton.click();
+        await expect(site.form.fieldError('Description')).toHaveText(site.labels.badges.minWords);
         expect(calls).toBe(0);
       });
 
       await test.step('5 words: accepted and sent', async () => {
-        await site.field('Description').fill(words(5));
-        await expect(site.fieldError('Description')).toBeHidden();
-        await site.submitButton.click();
-        await expect(site.formStatus).toHaveText(site.labels.ok);
+        await site.form.field('Description').fill(words(5));
+        await expect(site.form.fieldError('Description')).toBeHidden();
+        await site.form.submitButton.click();
+        await expect(site.form.status).toHaveText(site.labels.ok);
         expect(calls).toBe(1);
       });
     });
 
     test('Hidden spam trap stays empty and unreachable', async ({ site }) => {
-      const honey = site.form.locator('input[name="_honey"]');
+      const honey = site.form.honeypot;
       await expect(honey).toBeHidden();
       await expect(honey).toHaveAttribute('tabindex', '-1');
       await expect(honey).toHaveValue('');
@@ -256,13 +256,13 @@ test.describe('Request form', () => {
         await route.fulfill({ json: { success: true } });
       });
 
-      await site.fillRequest(createPrintRequest());
-      await site.submitButton.click();
+      await site.form.fill(createPrintRequest());
+      await site.form.submitButton.click();
 
-      await expect(site.formStatus).toHaveText(site.labels.sending);
-      await expect(site.submitButton).toBeDisabled();
+      await expect(site.form.status).toHaveText(site.labels.sending);
+      await expect(site.form.submitButton).toBeDisabled();
       release();
-      await expect(site.formStatus).toHaveText(site.labels.ok);
+      await expect(site.form.status).toHaveText(site.labels.ok);
     });
 
     test("Form shows FormSubmit's reason for a rejection", async ({ page, site }) => {
@@ -272,36 +272,36 @@ test.describe('Request form', () => {
       );
       const request = createPrintRequest();
 
-      await site.fillRequest(request);
-      await site.submitButton.click();
+      await site.form.fill(request);
+      await site.form.submitButton.click();
 
-      await expect(site.formStatus).toHaveText(`${site.labels.err} (This form needs Activation.)`);
-      await expect(site.formStatus).toHaveClass(/\berr\b/);
-      await expect(site.submitButton).toBeEnabled();
+      await expect(site.form.status).toHaveText(`${site.labels.err} (This form needs Activation.)`);
+      await expect(site.form.status).toHaveClass(/\berr\b/);
+      await expect(site.form.submitButton).toBeEnabled();
       // The user's text is kept so they can retry.
-      await expect(site.field('Description')).toHaveValue(request.description);
+      await expect(site.form.field('Description')).toHaveValue(request.description);
     });
 
     test('Form shows an error when the network fails', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.abort('internetdisconnected'));
 
-      await site.fillRequest(createPrintRequest());
-      await site.submitButton.click();
+      await site.form.fill(createPrintRequest());
+      await site.form.submitButton.click();
 
       // The browser's own reason (e.g. "Failed to fetch") is appended in brackets.
-      await expect(site.formStatus).toContainText(site.labels.err);
-      await expect(site.formStatus).toHaveClass(/\berr\b/);
-      await expect(site.submitButton).toBeEnabled();
+      await expect(site.form.status).toContainText(site.labels.err);
+      await expect(site.form.status).toHaveClass(/\berr\b/);
+      await expect(site.form.submitButton).toBeEnabled();
     });
 
     test('Form shows an error for a broken reply', async ({ page, site }) => {
       await page.route(FORMSUBMIT, (route) => route.fulfill({ status: 500, body: '<html>Server error</html>' }));
 
-      await site.fillRequest(createPrintRequest());
-      await site.submitButton.click();
+      await site.form.fill(createPrintRequest());
+      await site.form.submitButton.click();
 
-      await expect(site.formStatus).toContainText(site.labels.err);
-      await expect(site.submitButton).toBeEnabled();
+      await expect(site.form.status).toContainText(site.labels.err);
+      await expect(site.form.submitButton).toBeEnabled();
     });
 
     test('Form can be resent after an error', async ({ page, site }) => {
@@ -311,27 +311,26 @@ test.describe('Request form', () => {
         return attempt === 1 ? route.abort('internetdisconnected') : route.fulfill({ json: { success: true } });
       });
 
-      await site.fillRequest(createPrintRequest());
-      await site.submitButton.click();
-      await expect(site.formStatus).toContainText(site.labels.err);
+      await site.form.fill(createPrintRequest());
+      await site.form.submitButton.click();
+      await expect(site.form.status).toContainText(site.labels.err);
 
-      await site.submitButton.click();
-      await expect(site.formStatus).toHaveText(site.labels.ok);
-      await expect(site.formStatus).toHaveClass(/\bok\b/);
+      await site.form.submitButton.click();
+      await expect(site.form.status).toHaveText(site.labels.ok);
+      await expect(site.form.status).toHaveClass(/\bok\b/);
       expect(attempt).toBe(2);
     });
   });
 
   test('Service dropdown lists every service', async ({ site }) => {
-    const options = await site.field('Service').locator('option:not([value=""])').allTextContents();
-    expect(options).toEqual([...MONSTER_SERVICES.en]);
+    await expect(site.form.serviceOptions).toHaveText([...MONSTER_SERVICES.en]);
   });
 
   test('"Request a print" button leads to the form', async ({ page, site }) => {
     await site.goto();
     await page.getByTestId('hero-request').click();
     await expect(page).toHaveURL(/#contact$/);
-    await expect(site.form).toBeInViewport();
+    await expect(site.form.root).toBeInViewport();
   });
 });
 

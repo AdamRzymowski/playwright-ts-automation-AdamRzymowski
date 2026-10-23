@@ -1,4 +1,4 @@
-// @ts-ignore - remote k6 jslib module, resolved by k6 at run time
+// @ts-expect-error - remote k6 jslib module, resolved by k6 at run time
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.1.0/index.js';
 import { BASE_URL } from './monsters.ts';
 import { performanceReport } from './report.ts';

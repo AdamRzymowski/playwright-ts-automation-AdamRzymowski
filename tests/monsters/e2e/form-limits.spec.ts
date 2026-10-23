@@ -43,21 +43,21 @@ test.describe('Request form limits', () => {
 
   test('Form fields declare their character limits', async ({ site }) => {
     for (const [field, limit] of LIMITED) {
-      await expect.soft(site.field(field), field).toHaveAttribute('maxlength', String(limit));
+      await expect.soft(site.form.field(field), field).toHaveAttribute('maxlength', String(limit));
     }
-    await expect.soft(site.field('Quantity')).toHaveAttribute('min', String(QUANTITY_RANGE.min));
-    await expect.soft(site.field('Quantity')).toHaveAttribute('max', String(QUANTITY_RANGE.max));
+    await expect.soft(site.form.field('Quantity')).toHaveAttribute('min', String(QUANTITY_RANGE.min));
+    await expect.soft(site.form.field('Quantity')).toHaveAttribute('max', String(QUANTITY_RANGE.max));
   });
 
   for (const [field, limit] of LIMITED) {
     test.describe(`${field} (max ${limit})`, () => {
       test(`${LABEL[field]} stops accepting typing at ${limit} characters`, async ({ site }) => {
         // Fill to one below the limit, then type three more characters: only one may get in.
-        await site.field(field).fill(valueOfLength(field, limit - 1));
-        await site.field(field).press('End');
-        await site.field(field).pressSequentially('xyz');
+        await site.form.field(field).fill(valueOfLength(field, limit - 1));
+        await site.form.field(field).press('End');
+        await site.form.field(field).pressSequentially('xyz');
 
-        const length = await site.field(field).evaluate((el) => (el as HTMLInputElement).value.length);
+        const length = await site.form.field(field).evaluate((el) => (el as HTMLInputElement).value.length);
         expect(length).toBe(limit);
       });
 
@@ -70,11 +70,11 @@ test.describe('Request form limits', () => {
         const value = valueOfLength(field, limit);
         expect(value).toHaveLength(limit);
 
-        await site.fillRequest(createPrintRequest());
-        await site.field(field).fill(value);
-        await site.submitButton.click();
+        await site.form.fill(createPrintRequest());
+        await site.form.field(field).fill(value);
+        await site.form.submitButton.click();
 
-        await expect(site.formStatus).toHaveText(site.labels.ok);
+        await expect(site.form.status).toHaveText(site.labels.ok);
         expect(sent[field], `${field} sent unchanged`).toBe(value);
       });
 
@@ -88,14 +88,14 @@ test.describe('Request form limits', () => {
           calls++;
           return route.abort();
         });
-        await site.fillRequest(createPrintRequest());
-        await site.setValueDirectly(field, valueOfLength(field, limit + 1));
+        await site.form.fill(createPrintRequest());
+        await site.form.setValueDirectly(field, valueOfLength(field, limit + 1));
 
-        await site.submitButton.click();
+        await site.form.submitButton.click();
 
-        await expect(site.fieldError(field)).toHaveText(site.labels.badges.tooLong(limit));
-        await expect(site.field(field)).toHaveAttribute('aria-invalid', 'true');
-        await expect(site.formStatus).toHaveText(site.labels.fix);
+        await expect(site.form.fieldError(field)).toHaveText(site.labels.badges.tooLong(limit));
+        await expect(site.form.field(field)).toHaveAttribute('aria-invalid', 'true');
+        await expect(site.form.status).toHaveText(site.labels.fix);
         expect(calls).toBe(0);
       });
     });
@@ -109,10 +109,10 @@ test.describe('Request form limits', () => {
           sent = parseMultipart(route.request().postDataBuffer());
           await route.fulfill({ json: { success: 'true' } });
         });
-        await site.fillRequest(createPrintRequest({ quantity: ok }));
-        await site.submitButton.click();
+        await site.form.fill(createPrintRequest({ quantity: ok }));
+        await site.form.submitButton.click();
 
-        await expect(site.formStatus).toHaveText(site.labels.ok);
+        await expect(site.form.status).toHaveText(site.labels.ok);
         expect(sent.Quantity).toBe(String(ok));
       });
     }
@@ -124,11 +124,11 @@ test.describe('Request form limits', () => {
           calls++;
           return route.abort();
         });
-        await site.fillRequest(createPrintRequest());
-        await site.field('Quantity').fill(bad);
-        await site.submitButton.click();
+        await site.form.fill(createPrintRequest());
+        await site.form.field('Quantity').fill(bad);
+        await site.form.submitButton.click();
 
-        await expect(site.fieldError('Quantity')).toHaveText(site.labels.badges.quantity);
+        await expect(site.form.fieldError('Quantity')).toHaveText(site.labels.badges.quantity);
         expect(calls).toBe(0);
       });
     }
@@ -136,55 +136,55 @@ test.describe('Request form limits', () => {
 
   test('Description counter counts characters and warns near the limit', async ({ site }) => {
     const limit = FORM_LIMITS.Description;
-    const counter = site.descriptionCounter;
+    const counter = site.form.descriptionCounter;
 
     await test.step('starts at 0', async () => {
       await expect(counter).toHaveText(`0 / ${limit}`);
     });
 
     await test.step('counts as you type', async () => {
-      await site.field('Description').pressSequentially('hello world');
+      await site.form.field('Description').pressSequentially('hello world');
       await expect(counter).toHaveText(`11 / ${limit}`);
       await expect(counter).not.toHaveClass(/near-limit/);
     });
 
     await test.step('below 90%: no warning', async () => {
-      await site.field('Description').fill('x'.repeat(limit * 0.9 - 1));
+      await site.form.field('Description').fill('x'.repeat(limit * 0.9 - 1));
       await expect(counter).toHaveText(`${limit * 0.9 - 1} / ${limit}`);
       await expect(counter).not.toHaveClass(/near-limit/);
     });
 
     await test.step('from 90%: warning style', async () => {
-      await site.field('Description').fill('x'.repeat(limit * 0.9));
+      await site.form.field('Description').fill('x'.repeat(limit * 0.9));
       await expect(counter).toHaveClass(/near-limit/);
     });
 
     await test.step('at the limit', async () => {
-      await site.field('Description').fill('x'.repeat(limit));
+      await site.form.field('Description').fill('x'.repeat(limit));
       await expect(counter).toHaveText(`${limit} / ${limit}`);
     });
   });
 
   test('Description counter resets after sending', async ({ page, site }) => {
     await page.route(FORMSUBMIT, (route) => route.fulfill({ json: { success: 'true' } }));
-    await site.fillRequest(createPrintRequest());
-    await expect(site.descriptionCounter).not.toHaveText(`0 / ${FORM_LIMITS.Description}`);
+    await site.form.fill(createPrintRequest());
+    await expect(site.form.descriptionCounter).not.toHaveText(`0 / ${FORM_LIMITS.Description}`);
 
-    await site.submitButton.click();
+    await site.form.submitButton.click();
 
-    await expect(site.formStatus).toHaveText(site.labels.ok);
-    await expect(site.descriptionCounter).toHaveText(`0 / ${FORM_LIMITS.Description}`);
+    await expect(site.form.status).toHaveText(site.labels.ok);
+    await expect(site.form.descriptionCounter).toHaveText(`0 / ${FORM_LIMITS.Description}`);
   });
 
   test('Character limit message is in Polish on the Polish page', async ({ page, sitePl }) => {
     await page.route(FORMSUBMIT, (route) => route.abort());
     await sitePl.goto('#contact');
-    await sitePl.fillRequest(createPrintRequest({ service: 'Druk FDM' }));
-    await sitePl.setValueDirectly('Name', 'Z'.repeat(FORM_LIMITS.Name + 1));
+    await sitePl.form.fill(createPrintRequest({ service: 'Druk FDM' }));
+    await sitePl.form.setValueDirectly('Name', 'Z'.repeat(FORM_LIMITS.Name + 1));
 
-    await sitePl.submitButton.click();
+    await sitePl.form.submitButton.click();
 
-    await expect(sitePl.fieldError('Name')).toHaveText(sitePl.labels.badges.tooLong(FORM_LIMITS.Name));
-    await expect(sitePl.formStatus).toHaveText(sitePl.labels.fix);
+    await expect(sitePl.form.fieldError('Name')).toHaveText(sitePl.labels.badges.tooLong(FORM_LIMITS.Name));
+    await expect(sitePl.form.status).toHaveText(sitePl.labels.fix);
   });
 });

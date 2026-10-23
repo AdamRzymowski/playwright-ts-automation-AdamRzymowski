@@ -72,8 +72,13 @@ and KNOWN-ISSUES.md for open site bugs.
 - Specs import `test` and `expect` from `fixtures/monsters.ts`,
   never from `@playwright/test`: that `expect` screenshots every assertion (✓ passed / ✗ failed) and the
   fixtures add step screenshots, Desktop/Mobile labels and FormSubmit blocking.
-- Locators and EN/PL texts live in `pages/monsters/MonstersPage.ts`; the site uses `data-testid`
-  (`getByTestId`). No CSS/XPath in specs.
+- Page object: `pages/monsters/MonstersPage.ts` (`site`) built from parts in `pages/monsters/components/`.
+  Use `site.header`, `site.gallery`, `site.lightbox`, `site.form`, `site.dialog` and `site.footer`; EN/PL
+  texts and form limits are in `labels.ts`. The site uses `data-testid` (`getByTestId`). No CSS/XPath in
+  specs: add a named locator to the right part instead.
+- A test that fails because of an open site bug calls `knownIssue('KI-xxx')` (`tests/utils/knownIssues.ts`)
+  first: an expected failure until the bug is fixed. Don't skip it or exclude it by title.
+- Run `npm run check` (type-check + lint) before every commit; CI runs it on every push.
 - `tests/monsters/e2e/` runs at desktop and phone size on Chrome, Firefox and Edge; `tests/monsters/mobile/`
   only at phone size. Tags: `@a11y`, `@security`, `@smoke`.
 - Every spec sets `allure.epic('Substandard Monsters')` and `allure.feature(...)` in `beforeEach`; key tests set
@@ -93,6 +98,9 @@ and KNOWN-ISSUES.md for open site bugs.
 - The site scrolls smoothly; scroll with `behavior: 'instant'` before tapping, or taps land mid-animation.
 - FormSubmit can take over 30 s to confirm a real submission (KNOWN-ISSUES KI-012).
 - The `edge` projects need Microsoft Edge installed locally (`channel: 'msedge'`).
+- Live and dev runs retry once (CI twice), so a one-off slow load shows as "flaky", not failed.
+- k6 browser tests: no template strings (`` `…${x}` ``) inside functions passed to `page.evaluate`, because
+  k6 1.1 fails on them with "SyntaxError: Unexpected end of input". Build strings with `+` instead.
 
 ## Git
 - Test project: commit to `main`; ask before pushing. Site repo: work on `dev`, merge to `main` to publish;

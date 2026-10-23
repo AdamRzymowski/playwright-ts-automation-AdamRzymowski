@@ -52,15 +52,15 @@ test.describe('Request form: SQL guard', () => {
     test(`SQL guard blocks ${kind} in the description`, { tag: ['@security'] }, async ({ page, site }) => {
       await allure.severity(allure.Severity.CRITICAL);
       const sent = await countSends(page);
-      await site.fillRequest(createPrintRequest({ description: `Please print a dragon for me. ${sample}` }));
+      await site.form.fill(createPrintRequest({ description: `Please print a dragon for me. ${sample}` }));
 
-      await site.submitButton.click();
+      await site.form.submitButton.click();
 
-      await expect(site.sqlWarning).toBeVisible();
-      await expect(site.sqlWarning).toHaveText(site.labels.sqlWarning);
-      await expect(site.fieldError('Description')).toHaveText(site.labels.badges.sql);
-      await expect(site.field('Description')).toHaveAttribute('aria-invalid', 'true');
-      await expect(site.successDialog).toBeHidden();
+      await expect(site.form.sqlWarning).toBeVisible();
+      await expect(site.form.sqlWarning).toHaveText(site.labels.sqlWarning);
+      await expect(site.form.fieldError('Description')).toHaveText(site.labels.badges.sql);
+      await expect(site.form.field('Description')).toHaveAttribute('aria-invalid', 'true');
+      await expect(site.dialog.root).toBeHidden();
       expect(sent.count, 'nothing is sent').toBe(0);
     });
   }
@@ -68,13 +68,13 @@ test.describe('Request form: SQL guard', () => {
   for (const field of ['Name', 'File link'] as FormField[]) {
     test(`SQL guard blocks SQL in the ${field} field`, { tag: ['@security'] }, async ({ page, site }) => {
       const sent = await countSends(page);
-      await site.fillRequest(createPrintRequest());
-      await site.field(field).fill("x'; DROP TABLE users; --");
+      await site.form.fill(createPrintRequest());
+      await site.form.field(field).fill("x'; DROP TABLE users; --");
 
-      await site.submitButton.click();
+      await site.form.submitButton.click();
 
-      await expect(site.sqlWarning).toBeVisible();
-      await expect(site.fieldError(field)).toHaveText(site.labels.badges.sql);
+      await expect(site.form.sqlWarning).toBeVisible();
+      await expect(site.form.fieldError(field)).toHaveText(site.labels.badges.sql);
       expect(sent.count, 'nothing is sent').toBe(0);
     });
   }
@@ -82,48 +82,48 @@ test.describe('Request form: SQL guard', () => {
   for (const [kind, text] of Object.entries(NORMAL_TEXT)) {
     test(`SQL guard lets normal text through: ${kind}`, { tag: ['@security'] }, async ({ page, site }) => {
       const sent = await countSends(page);
-      await site.fillRequest(createPrintRequest({ description: text }));
+      await site.form.fill(createPrintRequest({ description: text }));
 
-      await site.submitButton.click();
+      await site.form.submitButton.click();
 
-      await expect(site.formStatus).toHaveText(site.labels.ok);
-      await expect(site.sqlWarning).toBeHidden();
+      await expect(site.form.status).toHaveText(site.labels.ok);
+      await expect(site.form.sqlWarning).toBeHidden();
       expect(sent.count).toBe(1);
     });
   }
 
   test('SQL warning clears once the text is fixed', async ({ page, site }) => {
     const sent = await countSends(page);
-    await site.fillRequest(createPrintRequest({ description: 'Please print this. SELECT * FROM users' }));
-    await site.submitButton.click();
-    await expect(site.sqlWarning).toBeVisible();
+    await site.form.fill(createPrintRequest({ description: 'Please print this. SELECT * FROM users' }));
+    await site.form.submitButton.click();
+    await expect(site.form.sqlWarning).toBeVisible();
 
-    await site.field('Description').fill('Please print this dragon in grey resin, about 10 cm tall.');
+    await site.form.field('Description').fill('Please print this dragon in grey resin, about 10 cm tall.');
 
-    await expect(site.sqlWarning).toBeHidden();
-    await expect(site.fieldError('Description')).toBeHidden();
-    await site.submitButton.click();
-    await expect(site.formStatus).toHaveText(site.labels.ok);
+    await expect(site.form.sqlWarning).toBeHidden();
+    await expect(site.form.fieldError('Description')).toBeHidden();
+    await site.form.submitButton.click();
+    await expect(site.form.status).toHaveText(site.labels.ok);
     expect(sent.count).toBe(1);
   });
 
   test('SQL warning is in Polish on the Polish page', async ({ page, sitePl }) => {
     const sent = await countSends(page);
     await sitePl.goto('#contact');
-    await sitePl.fillRequest(createPrintRequest({ service: 'Druk FDM', description: "Proszę wydrukować smoka. ' OR 1=1 --" }));
+    await sitePl.form.fill(createPrintRequest({ service: 'Druk FDM', description: "Proszę wydrukować smoka. ' OR 1=1 --" }));
 
-    await sitePl.submitButton.click();
+    await sitePl.form.submitButton.click();
 
-    await expect(sitePl.sqlWarning).toHaveText(sitePl.labels.sqlWarning);
-    await expect(sitePl.fieldError('Description')).toHaveText(sitePl.labels.badges.sql);
+    await expect(sitePl.form.sqlWarning).toHaveText(sitePl.labels.sqlWarning);
+    await expect(sitePl.form.fieldError('Description')).toHaveText(sitePl.labels.badges.sql);
     expect(sent.count).toBe(0);
   });
 
   test('SQL warning has enough contrast', async ({ page, site }) => {
     await countSends(page);
-    await site.fillRequest(createPrintRequest({ description: 'Please print this. UNION SELECT password FROM users' }));
-    await site.submitButton.click();
-    await expect(site.sqlWarning).toBeVisible();
+    await site.form.fill(createPrintRequest({ description: 'Please print this. UNION SELECT password FROM users' }));
+    await site.form.submitButton.click();
+    await expect(site.form.sqlWarning).toBeVisible();
 
     const { default: AxeBuilder } = await import('@axe-core/playwright');
     const results = await new AxeBuilder({ page }).withRules(['color-contrast']).include('[data-testid="form-sql-warning"]').analyze();

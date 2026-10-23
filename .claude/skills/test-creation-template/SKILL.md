@@ -107,15 +107,15 @@ test.describe('<Area>', () => {
     await site.goto('#contact');
 
     await test.step('1. Fill in the required fields and type 0 in Quantity', async () => {
-      await site.fillRequest(createPrintRequest());
-      await site.field('Quantity').fill('0');
-      await expect(site.field('Quantity')).toHaveValue('0');
+      await site.form.fill(createPrintRequest());
+      await site.form.field('Quantity').fill('0');
+      await expect(site.form.field('Quantity')).toHaveValue('0');
     });
 
     await test.step('2. Click "Send request"', async () => {
-      await site.submitButton.click();
-      await expect(site.fieldError('Quantity')).toHaveText(site.labels.badges.quantity);
-      await expect(site.formStatus).toHaveText(site.labels.fix);
+      await site.form.submitButton.click();
+      await expect(site.form.fieldError('Quantity')).toHaveText(site.labels.badges.quantity);
+      await expect(site.form.status).toHaveText(site.labels.fix);
       expect(sent, 'nothing is sent').toBe(0);
     });
   });
@@ -125,7 +125,8 @@ Code rules:
 - Import `test` and `expect` from `fixtures/monsters`, never from
   `@playwright/test`: that `expect` attaches a **✓ passed / ✗ failed screenshot to every assertion**, and the
   fixtures add step screenshots, Desktop/Mobile labels and FormSubmit blocking.
-- Locators and texts live in `pages/monsters/MonstersPage.ts` (`getByTestId`, `getByRole`; no CSS/XPath in
+- Locators live in the page object's parts (`pages/monsters/components/`: `site.header`, `site.gallery`,
+  `site.lightbox`, `site.form`, `site.dialog`, `site.footer`) and texts in `pages/monsters/labels.ts` (`getByTestId`, `getByRole`; no CSS/XPath in
   specs). Add new ones there, with EN and PL texts in `LABELS`.
 - Test data from `tests/utils/testData.ts` (Faker builders, `TEST_EMAIL`).
 - Use `expect.soft` when one step checks several independent things, so all of them are reported.
@@ -179,17 +180,19 @@ Then run `npm run manual:build`; it must say **all matched** (one manual case pe
    - whether it sends email or uploads to Testiny.
 
    Then wait for a yes. A yes covers that one run only.
-1. `npx playwright test <file> -g "<title>" --project=chromium` against the right site
+1. `npm run check` (type-check + lint, no site access) must pass before any run.
+2. `npx playwright test <file> -g "<title>" --project=chromium` against the right site
    (`MONSTERS_ENV=local` for unpublished changes, `live` for the published site) until it passes, or fails
    only because of a real site bug.
-2. Run it on every project for its folder, and repeat a new test 3 times (`--repeat-each=3`) to rule out
+3. Run it on every project for its folder, and repeat a new test 3 times (`--repeat-each=3`) to rule out
    flakiness. Don't pass `--reporter=...` if you want to check the Allure screenshots (it disables Allure).
-3. Only run real-submission tests when the user has asked for it (they send emails).
+4. Only run real-submission tests when the user has asked for it (they send emails).
 
 ## 7. If it finds a bug
 Add an entry to `KNOWN-ISSUES.md` (next KI number, severity, steps to reproduce from the definition,
-expected/actual, possible fix, the covering test) and tell the user. Leave the test failing; never weaken it
-to pass.
+expected/actual, possible fix, the covering test) and tell the user. Never weaken the test to pass. Add the KI
+to `KNOWN_ISSUES` in `tests/utils/knownIssues.ts` and call `knownIssue('KI-xxx')` as the test's first line,
+so it is an expected failure until the bug is fixed (then it turns red, telling you to close the KI).
 
 ## 8. Finish
 - Update `README.md` if a new area or command was added.

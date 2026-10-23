@@ -1,183 +1,68 @@
-import { type Locator, type Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
+import { LABELS, type GalleryName, type Lang, type Section } from './labels';
+import { Footer } from './components/Footer';
+import { Gallery } from './components/Gallery';
+import { Header } from './components/Header';
+import { Lightbox } from './components/Lightbox';
+import { RequestForm } from './components/RequestForm';
+import { SuccessDialog } from './components/SuccessDialog';
+import { waitForSiteScript } from './components/siteScript';
 
-export type Lang = 'en' | 'pl';
-export type GalleryName = 'resin' | 'fdm' | 'design' | 'painting' | 'miniatures' | 'terrain';
-export type Section = 'services' | 'gallery' | 'how' | 'about' | 'contact';
+// Texts, field names and limits live in labels.ts; re-exported so specs keep one import.
+export * from './labels';
 
-/** Visible text that differs between index.html (en) and pl.html (pl). */
-export const LABELS = {
-  en: {
-    path: '/index.html',
-    title: /3D Printing Service/,
-    heading: /Monstrously good prints/,
-    nav: { services: 'Services', gallery: 'Gallery', how: 'How it works', about: 'About Us', contact: 'Request a print' },
-    tabs: { resin: 'Resin printing', fdm: 'FDM printing', design: 'Design examples', painting: 'Miniatures and Terrain' },
-    menuButton: 'Open menu',
-    submit: 'Send request',
-    requiredNote: '* Required fields',
-    sending: 'Sending…',
-    ok: "Thanks! Your request has been sent. I'll be in touch soon.",
-    err: 'Sorry, something went wrong. Please try again or message me on Facebook.',
-    // v1.6.0+: the site shows its own red badge in each field instead of browser pop-ups.
-    fix: 'Please check the fields marked in red.',
-    badges: {
-      name: 'Enter your name',
-      emailMissing: 'Enter your email',
-      emailInvalid: 'Check the email',
-      service: 'Choose a service',
-      quantity: 'Enter 1 to 10,000',
-      descriptionMissing: 'Describe what you need',
-      minWords: 'At least 5 words',
-      tooLong: (n: number) => `Max. ${n} characters`,
-      link: 'Enter a valid link',
-      sql: 'Looks like database code',
-    },
-    sqlWarning:
-      'Part of your request looks like database code (SQL), so it was not sent. Please describe what you need in plain words.',
-    // v1.7.0+: success pop-up
-    dialog: {
-      title: 'Request sent!',
-      text: "Thanks for your request. I'll get back to you with a quote, usually within a day or two. Keep an eye on your inbox (and spam folder).",
-      close: 'Great, thanks',
-      x: 'Close',
-    },
-    languageField: 'English',
-    subjectSuffix: '',
-  },
-  pl: {
-    path: '/pl.html',
-    title: /Usługi druku 3D/,
-    heading: /Potwornie dobre wydruki/,
-    nav: { services: 'Usługi', gallery: 'Galeria', how: 'Jak to działa', about: 'O nas', contact: 'Zamów wydruk' },
-    tabs: { resin: 'Druk żywiczny', fdm: 'Druk FDM', design: 'Przykładowe projekty', painting: 'Figurki i makiety' },
-    menuButton: 'Otwórz menu',
-    submit: 'Wyślij zapytanie',
-    requiredNote: '* Pola obowiązkowe',
-    sending: 'Wysyłanie…',
-    ok: 'Dziękuję! Zapytanie zostało wysłane. Wkrótce się odezwę.',
-    err: 'Przepraszam, coś poszło nie tak. Spróbuj ponownie lub napisz do mnie na Facebooku.',
-    fix: 'Sprawdź pola zaznaczone na czerwono.',
-    badges: {
-      name: 'Podaj imię',
-      emailMissing: 'Podaj e-mail',
-      emailInvalid: 'Sprawdź e-mail',
-      service: 'Wybierz usługę',
-      quantity: 'Od 1 do 10 000',
-      descriptionMissing: 'Opisz zamówienie',
-      minWords: 'Min. 5 słów',
-      tooLong: (n: number) => `Maks. ${n} znaków`,
-      link: 'Podaj poprawny link',
-      sql: 'Wygląda jak kod bazy danych',
-    },
-    sqlWarning:
-      'Część zapytania wygląda jak kod bazy danych (SQL), więc nie zostało wysłane. Opisz, czego potrzebujesz, zwykłymi słowami.',
-    dialog: {
-      title: 'Zapytanie wysłane!',
-      text: 'Dziękuję za zapytanie. Odezwę się z wyceną, zwykle w ciągu jednego lub dwóch dni. Zajrzyj do skrzynki (także do folderu spam).',
-      close: 'Super, dzięki',
-      x: 'Zamknij',
-    },
-    languageField: 'Polski',
-    subjectSuffix: ' [PL]',
-  },
-} as const;
-
-/** What a visitor types into the request form. */
-export type RequestDetails = {
-  name: string;
-  email: string;
-  service: string;
-  quantity?: number;
-  fileLink?: string;
-  description: string;
-};
-
-/** Form field name (as posted to FormSubmit) -> data-testid of its input. */
-export const FORM_FIELDS = {
-  Name: 'form-name',
-  email: 'form-email',
-  Service: 'form-service',
-  Quantity: 'form-quantity',
-  'File link': 'form-file-link',
-  Description: 'form-description',
-} as const;
-export type FormField = keyof typeof FORM_FIELDS;
-
-/** Character limits (maxlength) of the request form, and the quantity range. */
-export const FORM_LIMITS = {
-  Name: 50,
-  email: 50,
-  'File link': 1000,
-  Description: 1000,
-} as const;
-export type LimitedField = keyof typeof FORM_LIMITS;
-export const QUANTITY_RANGE = { min: 1, max: 10_000 } as const;
-
-const NAV_TESTID: Record<Section, string> = {
-  services: 'nav-services',
-  gallery: 'nav-gallery',
-  how: 'nav-how',
-  about: 'nav-about',
-  contact: 'nav-request',
-};
-
-/** Locators use the site's data-testid attributes (see fixtures/monsters.ts). */
+/**
+ * The Substandard Monsters page (index.html / pl.html), built from its parts:
+ *   site.header   logo, menu, language switch, phone menu button
+ *   site.gallery  tabs, sub-tabs, photo panels and photos
+ *   site.lightbox enlarged photo
+ *   site.form     request form, its fields, badges and messages
+ *   site.dialog   success pop-up
+ *   site.footer   year, version, Facebook
+ * Locators use the site's data-testid attributes (see fixtures/monsters.ts).
+ */
 export class MonstersPage {
   readonly labels: (typeof LABELS)[Lang];
-  readonly header: Locator;
-  readonly logo: Locator;
-  readonly nav: Locator;
-  readonly menuButton: Locator;
+  readonly header: Header;
+  readonly gallery: Gallery;
+  readonly lightbox: Lightbox;
+  readonly form: RequestForm;
+  readonly dialog: SuccessDialog;
+  readonly footer: Footer;
+
+  /** The <html> element (its lang attribute). */
+  readonly html: Locator;
+  readonly viewportMeta: Locator;
+  /** Every image with a source, anywhere on the page. */
+  readonly images: Locator;
   readonly heading: Locator;
+  readonly heroLogo: Locator;
   readonly heroButtons: Locator;
+  /** The numbered steps in "How it works". */
+  readonly howSteps: Locator;
   readonly serviceCards: Locator;
-  readonly tabs: Locator;
-  readonly subtabRow: Locator;
-  readonly subtabs: Locator;
-  readonly galleries: Locator;
-  readonly lightbox: Locator;
-  readonly lightboxImage: Locator;
-  readonly lightboxCaption: Locator;
-  readonly lightboxClose: Locator;
-  readonly contactIntro: Locator;
-  readonly form: Locator;
-  readonly submitButton: Locator;
-  readonly requiredNote: Locator;
-  readonly formStatus: Locator;
-  readonly footer: Locator;
-  readonly footerYear: Locator;
-  readonly footerVersion: Locator;
   readonly contactFacebook: Locator;
-  readonly footerFacebook: Locator;
+  /** Both Facebook links: under the contact text and in the footer. */
   readonly facebookLinks: Locator;
 
   constructor(readonly page: Page, readonly lang: Lang = 'en') {
     this.labels = LABELS[lang];
-    this.header = page.getByTestId('header');
-    this.logo = page.getByTestId('header-logo');
-    this.nav = page.getByTestId('nav');
-    this.menuButton = page.getByTestId('nav-toggle');
+    this.header = new Header(page);
+    this.gallery = new Gallery(page);
+    this.lightbox = new Lightbox(page);
+    this.form = new RequestForm(page, this.labels);
+    this.dialog = new SuccessDialog(page);
+    this.footer = new Footer(page);
+
+    this.html = page.locator('html');
+    this.viewportMeta = page.locator('meta[name="viewport"]');
+    this.images = page.locator('img[src]');
     this.heading = page.getByTestId('hero-title');
+    this.heroLogo = page.getByTestId('hero-logo');
     this.heroButtons = page.locator('[data-testid^="hero-"].btn');
+    this.howSteps = page.getByTestId('how').locator('ol.steps > li');
     this.serviceCards = page.locator('a.service');
-    this.tabs = page.getByTestId('gallery-tabs').getByRole('tab');
-    this.subtabRow = page.getByTestId('gallery-subtabs');
-    this.subtabs = this.subtabRow.getByRole('tab');
-    this.galleries = page.locator('.gallery');
-    this.lightbox = page.getByTestId('lightbox');
-    this.lightboxImage = page.getByTestId('lightbox-image');
-    this.lightboxCaption = page.getByTestId('lightbox-caption');
-    this.lightboxClose = page.getByTestId('lightbox-close');
-    this.contactIntro = page.getByTestId('contact-title');
-    this.form = page.getByTestId('request-form');
-    this.submitButton = page.getByTestId('form-submit');
-    this.requiredNote = page.getByTestId('form-required-note');
-    this.formStatus = page.getByTestId('form-status');
-    this.footer = page.getByTestId('footer');
-    this.footerYear = page.getByTestId('footer-year');
-    this.footerVersion = page.getByTestId('footer-version');
     this.contactFacebook = page.getByTestId('contact-facebook');
-    this.footerFacebook = page.getByTestId('footer-facebook');
     this.facebookLinks = page.locator('[data-testid="contact-facebook"], [data-testid="footer-facebook"]');
   }
 
@@ -186,136 +71,35 @@ export class MonstersPage {
     await this.waitForScript();
   }
 
-  /** At phone width the menu is behind the ☰ button; open it if so (no-op on desktop). */
-  async openMenuIfCollapsed() {
-    await this.waitForScript();
-    if ((await this.menuButton.isVisible()) && (await this.menuButton.getAttribute('aria-expanded')) !== 'true') {
-      await this.menuButton.click();
-      await this.page.waitForFunction(() => document.querySelector('[data-testid="nav-toggle"]')?.getAttribute('aria-expanded') === 'true');
-    }
-  }
-
   /** script.js fills in the footer version first; once it's there, the click handlers are attached too. */
   async waitForScript() {
-    await this.page.waitForFunction(() => !!document.getElementById('site-version')?.textContent);
-  }
-
-  /** Clicks a header link the way a user would on any screen size. */
-  async clickNav(section: Section) {
-    await this.openMenuIfCollapsed();
-    await this.navLink(section).click();
-  }
-
-  navLink(section: Section): Locator {
-    return this.page.getByTestId(NAV_TESTID[section]);
+    await waitForSiteScript(this.page);
   }
 
   section(section: Section): Locator {
     return this.page.getByTestId(section);
   }
 
-  tab(name: GalleryName): Locator {
-    return this.page.locator(`[role="tab"][data-gallery="${name}"]`);
-  }
-
-  gallery(name: GalleryName): Locator {
-    return this.page.locator(`.gallery[data-gallery="${name}"]`);
-  }
-
   serviceCard(name: GalleryName): Locator {
     return this.page.locator(`a.service[data-gallery="${name}"]`);
-  }
-
-  languageLink(lang: Lang): Locator {
-    return this.page.getByTestId(`lang-${lang}`);
-  }
-
-  /** The one gallery that is currently shown. */
-  visibleGallery(): Locator {
-    return this.page.locator('.gallery:not([hidden])');
-  }
-
-  field(name: FormField): Locator {
-    return this.page.getByTestId(FORM_FIELDS[name]);
-  }
-
-  /** The red badge the site shows inside a field when it has a problem (v1.6.0+). */
-  fieldError(name: FormField): Locator {
-    return this.page.getByTestId(`${FORM_FIELDS[name]}-error`);
-  }
-
-  /** Success pop-up shown after a request is sent (v1.7.0+). */
-  get successDialog(): Locator {
-    return this.page.getByTestId('success-dialog');
-  }
-  get successTitle(): Locator {
-    return this.page.getByTestId('success-dialog-title');
-  }
-  get successText(): Locator {
-    return this.page.getByTestId('success-dialog-text');
-  }
-  /** The main "Great, thanks" button. */
-  get successClose(): Locator {
-    return this.page.getByTestId('success-dialog-close');
-  }
-  /** The × in the corner. */
-  get successX(): Locator {
-    return this.page.getByTestId('success-dialog-x');
-  }
-
-  /** Warning block above the Send button when a field looks like database code (SQL) (v1.8.0+). */
-  get sqlWarning(): Locator {
-    return this.page.getByTestId('form-sql-warning');
-  }
-
-  /** The live "123 / 1000" counter under the description. */
-  get descriptionCounter(): Locator {
-    return this.page.getByTestId('form-description-count');
-  }
-
-  /** Puts text in a field without typing, the way autofill or a script would (bypasses maxlength). */
-  async setValueDirectly(name: FormField, value: string) {
-    await this.field(name).evaluate((el, v) => {
-      (el as HTMLInputElement).value = v;
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    }, value);
-  }
-
-  /** Browser validation message of a field ('' when valid). */
-  async validationMessage(name: FormField): Promise<string> {
-    return this.field(name).evaluate((el) => (el as HTMLInputElement).validationMessage);
-  }
-
-  async isValid(name: FormField): Promise<boolean> {
-    return this.field(name).evaluate((el) => (el as HTMLInputElement).validity.valid);
-  }
-
-  async fillRequest(details: RequestDetails) {
-    await this.field('Name').fill(details.name);
-    await this.field('email').fill(details.email);
-    await this.field('Service').selectOption(details.service);
-    if (details.quantity !== undefined) await this.field('Quantity').fill(String(details.quantity));
-    if (details.fileLink) await this.field('File link').fill(details.fileLink);
-    await this.field('Description').fill(details.description);
   }
 
   /**
    * Positions of several elements measured in one go, in page coordinates (not affected by scrolling),
    * so layout checks can't be skewed by smooth scrolling or images loading between measurements.
    */
-  async boxes(selectors: string[]): Promise<{ x: number; y: number; width: number; height: number }[]> {
-    return this.page.evaluate((sels) => {
-      return sels.map((sel) => {
-        const el = document.querySelector(sel);
-        if (!el) throw new Error(`No element for ${sel}`);
-        const r = el.getBoundingClientRect();
-        return { x: r.left + window.scrollX, y: r.top + window.scrollY, width: r.width, height: r.height };
-      });
-    }, selectors);
-  }
-
-  /** Subject line the page builds for FormSubmit, e.g. "FDM print request from Anna - Substandard Monsters". */
-  expectedSubject(details: RequestDetails): string {
-    return `${details.service} request from ${details.name} - Substandard Monsters${this.labels.subjectSuffix}`;
+  async boxes(locators: Locator[]): Promise<{ x: number; y: number; width: number; height: number }[]> {
+    const handles = await Promise.all(locators.map((l) => l.elementHandle()));
+    try {
+      return await this.page.evaluate((els) => {
+        return els.map((el, i) => {
+          if (!el) throw new Error(`No element for locator ${i + 1}`);
+          const r = el.getBoundingClientRect();
+          return { x: r.left + window.scrollX, y: r.top + window.scrollY, width: r.width, height: r.height };
+        });
+      }, handles);
+    } finally {
+      await Promise.all(handles.map((h) => h?.dispose()));
+    }
   }
 }

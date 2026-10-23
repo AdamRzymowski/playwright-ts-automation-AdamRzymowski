@@ -40,7 +40,10 @@
     "manual:build": "node tools/build-manual-tests.mjs",
     "test:browserstack": "node tools/run-tests.mjs --env=live --suite=ui --browsers=browserstack",
     "test:desktop-ui": "node tools/run-tests.mjs --env=live --suite=ui --browsers=desktop",
-    "allure:browsers": "allure open allure-report/by-browser"
+    "allure:browsers": "allure open allure-report/by-browser",
+    "typecheck": "tsc -p . && tsc -p perf",
+    "lint": "eslint .",
+    "check": "npm run typecheck && npm run lint"
   },
   "keywords": [],
   "author": "",
@@ -51,10 +54,15 @@
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.64.1",
     "@testiny/automation": "^1.42.0",
+    "@types/k6": "^2.3.0",
     "@types/node": "^26.6.5",
     "allure": "^3.20.1",
     "allure-js-commons": "^3.13.0",
     "allure-playwright": "^3.13.0",
-    "cross-env": "^10.1.0"
+    "cross-env": "^10.1.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-playwright": "^2.12.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0"
   }
 }

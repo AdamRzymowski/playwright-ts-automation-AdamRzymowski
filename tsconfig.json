@@ -1,0 +1,20 @@
+{
+  // Type-check only (npm run typecheck): Playwright compiles the TypeScript itself when tests run.
+  // The k6 scripts in perf/ have their own tsconfig (k6 types, no Node).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "perf", "allure-results", "allure-report", "reports", "test-results", "playwright-report"]
+}

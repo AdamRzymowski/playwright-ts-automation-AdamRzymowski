@@ -265,7 +265,8 @@ function nextRunName(environment, now = new Date()) {
   writeFileSync(file, JSON.stringify(counts, null, 2));
   return `${prefix}-${counts[prefix]}`;
 }
-const testinyRunName = testiny ? nextRunName(target) : null;
+// CI passes its own name (TESTINY_RUN_NAME, e.g. 22.10.26-live-ci-57); locally the counter gives the attempt number.
+const testinyRunName = testiny ? process.env.TESTINY_RUN_NAME || nextRunName(target) : null;
 
 let openReport = !args['no-report'];
 if (playwrightSuites.length && interactive) {

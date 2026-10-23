@@ -39,8 +39,8 @@ test.describe('Request form: file link format', () => {
   });
 
   test('File link field is optional with a helpful placeholder', async ({ page, site }) => {
-    await expect(site.field('File link')).not.toHaveAttribute('required');
-    await expect(site.field('File link')).toHaveAttribute('placeholder', /Thingiverse|Printables|Drive|Dropbox/);
+    await expect(site.form.field('File link')).not.toHaveAttribute('required');
+    await expect(site.form.field('File link')).toHaveAttribute('placeholder', /Thingiverse|Printables|Drive|Dropbox/);
 
     // A request without a link is sent normally.
     let sent: Record<string, string> = {};
@@ -48,9 +48,9 @@ test.describe('Request form: file link format', () => {
       sent = parseMultipart(route.request().postDataBuffer());
       await route.fulfill({ json: { success: 'true' } });
     });
-    await site.fillRequest(createPrintRequest({ fileLink: '' }));
-    await site.submitButton.click();
-    await expect(site.formStatus).toHaveText(site.labels.ok);
+    await site.form.fill(createPrintRequest({ fileLink: '' }));
+    await site.form.submitButton.click();
+    await expect(site.form.status).toHaveText(site.labels.ok);
     expect(sent['File link']).toBe('');
   });
 
@@ -62,11 +62,11 @@ test.describe('Request form: file link format', () => {
         await route.fulfill({ json: { success: 'true' } });
       });
 
-      await site.fillRequest(createPrintRequest({ fileLink: link }));
-      await site.submitButton.click();
+      await site.form.fill(createPrintRequest({ fileLink: link }));
+      await site.form.submitButton.click();
 
-      await expect(site.formStatus).toHaveText(site.labels.ok);
-      await expect(site.fieldError('File link')).toHaveCount(0);
+      await expect(site.form.status).toHaveText(site.labels.ok);
+      await expect(site.form.fieldError('File link')).toHaveCount(0);
       expect(sent['File link']).toBe(link);
       // Sanity check of the test data itself: each part is a real http(s) web address (scheme optional).
       for (const part of link.split(/[\s,]+/).filter(Boolean)) {
@@ -86,11 +86,11 @@ test.describe('Request form: file link format', () => {
         return route.fulfill({ json: { success: 'true' } });
       });
 
-      await site.fillRequest(createPrintRequest({ fileLink: link }));
-      await site.submitButton.click();
+      await site.form.fill(createPrintRequest({ fileLink: link }));
+      await site.form.submitButton.click();
 
-      await expect.soft(site.fieldError('File link'), 'link field shows a problem badge').toHaveText(site.labels.badges.link);
-      await expect.soft(site.field('File link')).toHaveAttribute('aria-invalid', 'true');
+      await expect.soft(site.form.fieldError('File link'), 'link field shows a problem badge').toHaveText(site.labels.badges.link);
+      await expect.soft(site.form.field('File link')).toHaveAttribute('aria-invalid', 'true');
       expect(calls, 'malformed link must not be sent').toBe(0);
     });
   }

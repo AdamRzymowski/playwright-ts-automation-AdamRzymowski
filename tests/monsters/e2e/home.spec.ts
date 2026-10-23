@@ -16,18 +16,18 @@ test.describe('Home page', () => {
 
     await expect(page).toHaveTitle(site.labels.title);
     await expect(site.heading).toHaveText(site.labels.heading);
-    await expect(page.locator('img.hero-logo')).toBeVisible();
+    await expect(site.heroLogo).toBeVisible();
     for (const id of SECTIONS) {
       await expect.soft(site.section(id), `section #${id}`).toBeAttached();
       await expect.soft(site.section(id).getByRole('heading', { level: 2 }).first()).not.toBeEmpty();
     }
     await expect.soft(site.serviceCards).toHaveCount(4);
-    await expect.soft(page.locator('ol.steps > li')).toHaveCount(4);
+    await expect.soft(site.howSteps).toHaveCount(4);
   });
 
   for (const id of SECTIONS) {
     test(`Menu link scrolls to the #${id} section`, async ({ page, site }) => {
-      await site.clickNav(id);
+      await site.header.clickNav(id);
 
       await expect(page).toHaveURL(new RegExp(`#${id}$`));
       await expect(site.section(id)).toBeInViewport();
@@ -35,7 +35,7 @@ test.describe('Home page', () => {
   }
 
   test('Footer shows the current year and safe Facebook links', async ({ site }) => {
-    await expect(site.footerYear).toHaveText(String(new Date().getFullYear()));
+    await expect(site.footer.year).toHaveText(String(new Date().getFullYear()));
 
     const count = await site.facebookLinks.count();
     expect(count).toBeGreaterThanOrEqual(2);
@@ -48,17 +48,17 @@ test.describe('Home page', () => {
   });
 
   test('Footer shows the site version', async ({ site }) => {
-    await expect(site.footerVersion).toHaveText(/^\d+\.\d+\.\d+$/);
-    await allure.parameter('Site version', (await site.footerVersion.textContent()) ?? '');
+    await expect(site.footer.version).toHaveText(/^\d+\.\d+\.\d+$/);
+    await allure.parameter('Site version', (await site.footer.version.textContent()) ?? '');
   });
 
-  test('Every image on the page loads', async ({ page, request }) => {
+  test('Every image on the page loads', async ({ request, site }) => {
     await allure.severity(allure.Severity.CRITICAL);
     // Downloads every photo; allow for a slow connection to the live site.
     test.slow();
 
     // Includes hidden galleries and lazy-loaded photos, so check each file directly (HEAD: no download).
-    const sources = await page.locator('img[src]').evaluateAll((imgs) =>
+    const sources = await site.images.evaluateAll((imgs) =>
       [...new Set(imgs.map((img) => (img as HTMLImageElement).src))],
     );
     expect(sources.length).toBeGreaterThan(10);
@@ -73,8 +73,8 @@ test.describe('Home page', () => {
     page.on('pageerror', (e) => errors.push(e.message));
 
     await site.goto();
-    await site.tab('painting').click();
-    await site.gallery('miniatures').locator('.gallery-item').first().click();
+    await site.gallery.tab('painting').click();
+    await site.gallery.items('miniatures').first().click();
     await page.keyboard.press('Escape');
 
     expect(errors).toEqual([]);

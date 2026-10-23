@@ -20,30 +20,30 @@ test.describe('Mobile accessibility (WCAG 2.2 AA)', { tag: '@a11y' }, () => {
 
   test('Open phone menu has no WCAG violations', async ({ page, site }) => {
     await site.goto();
-    await site.menuButton.tap();
-    await expect(site.navLink('gallery')).toBeVisible();
+    await site.header.menuButton.tap();
+    await expect(site.header.navLink('gallery')).toBeVisible();
     const violations = await scanWcag(page, 'open menu', { include: '[data-testid="header"]' });
     expect(violations.map((v) => v.id), formatViolations(violations)).toEqual([]);
   });
 
   test('Menu button tells screen readers if it is open', async ({ site }) => {
     await site.goto();
-    await expect(site.menuButton).toHaveAccessibleName(site.labels.menuButton);
-    await expect(site.menuButton).toHaveAttribute('aria-expanded', 'false');
-    await site.menuButton.tap();
-    await expect(site.menuButton).toHaveAttribute('aria-expanded', 'true');
+    await expect(site.header.menuButton).toHaveAccessibleName(site.labels.menuButton);
+    await expect(site.header.menuButton).toHaveAttribute('aria-expanded', 'false');
+    await site.header.menuButton.tap();
+    await expect(site.header.menuButton).toHaveAttribute('aria-expanded', 'true');
   });
 
-  test('Pinch-zoom is allowed', async ({ page, site }) => {
+  test('Pinch-zoom is allowed', async ({ site }) => {
     await site.goto();
-    const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
+    const viewport = await site.viewportMeta.getAttribute('content');
     expect(viewport).not.toMatch(/user-scalable\s*=\s*(no|0)/);
     expect(viewport).not.toMatch(/maximum-scale\s*=\s*1(\.0)?\b/);
   });
 
   test('Buttons and links are big enough to tap', async ({ page, site }) => {
     await site.goto();
-    await site.menuButton.tap();
+    await site.header.menuButton.tap();
 
     const { failing, spaced } = await page.evaluate(() => {
       const targets = [...document.querySelectorAll<HTMLElement>('a, button, select, input:not([type=hidden]), textarea')]

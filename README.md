@@ -161,8 +161,36 @@ Or run Playwright directly:
 | `npm run test:mobile` | Mobile emulation (Pixel 7 on Chrome and Edge) |
 | `npm run test:chrome` / `test:firefox` / `test:edge` | One browser |
 | `npm run codegen` | Record clicks in a browser and generate test code |
+| `npm run check` | Type-check (`npm run typecheck`) and lint (`npm run lint`): no browser, no site. Run before every commit |
 
 Point the tests at another copy of the site with `MONSTERS_ENV` / `MONSTERS_URL` (see `sites.ts`).
+
+**Retries and timeouts** (`playwright.config.ts`):
+- **Retries:** live and dev runs retry a failed test once (twice on CI); the local copy never retries.
+  A test that passes on its retry is reported as **flaky**, not failed. `RETRIES=n` overrides.
+- **Timeouts:**
+  - a click or fill: at most 15 s;
+  - a page load: at most 30 s;
+  - waiting for the site's script: at most 15 s, failing with "Site script did not start… (page slow to
+    load)";
+  - an assertion waits up to 5 s;
+  - a whole test: at most 30 s.
+
+### Continuous integration (GitHub Actions)
+
+`.github/workflows/tests.yml` runs on GitHub:
+
+| When | What |
+| --- | --- |
+| Every push to `main` and every pull request | `npm run check`, then the `@smoke` UI tests on Chrome (desktop and phone view) against the live site |
+| Every night at 02:00 UTC, and on demand (Actions > Tests > Run workflow) | `npm run check`, then all UI tests, each browser separately at desktop and phone size, against the live site |
+
+- **Reports:** the Allure reports and PDFs are kept as downloadable artifacts on the run's page (14 days for
+  smoke, 30 days for regression).
+- **Testiny:** live runs upload to Testiny when the repository has the `TESTINY_API_KEY` and
+  `TESTINY_PROJECT` secrets (GitHub > Settings > Secrets and variables > Actions). They're named
+  `<DD.MM.YY>-live-ci-<run number>`, e.g. `22.10.26-live-ci-57`.
+- **Never run in CI:** real form submissions, k6 performance tests and BrowserStack.
 
 ## Reports
 
@@ -346,12 +374,29 @@ sites.ts                 URLs of the sites under test
 global-setup.ts          Clears old Allure results before each run
 allurerc.mjs             Allure report settings (name, plugins, history)
 tools/serve-static.mjs   Tiny static server for the local Monsters site
-pages/monsters/          Page object: the site's locators, texts (EN/PL) and actions
+pages/monsters/          Page object (MonstersPage.ts) built from parts in components/:
+                           Header, Gallery, Lightbox, RequestForm, SuccessDialog, Footer;
+                           texts (EN/PL), form fields and limits in labels.ts
 fixtures/monsters.ts     Extended `test` (page objects, FormSubmit blocking, step screenshots)
 tests/monsters/e2e/      Desktop specs (also run in phone view on every browser)
 tests/monsters/mobile/   Phone-only layout specs (mobile-chrome, mobile-firefox, mobile-edge)
-tests/utils/             Faker data builders, multipart parser, accessibility helper
+tests/utils/             Faker data builders, multipart parser, accessibility helper, knownIssue()
+perf/                    k6 performance tests (smoke, load, soak) + perf/lib (shared, report)
+.github/workflows/       CI: check + smoke on push/PR, full regression nightly
+tsconfig.json            Type-check settings (perf/tsconfig.json for k6); eslint.config.mjs: lint rules
 ```
+
+The page object is used as `site.<part>.<thing>`, for example `site.form.field('Name')`,
+`site.form.submitButton`, `site.gallery.tab('fdm')`, `site.lightbox.root` and `site.dialog.closeButton`.
+Only the page-wide items sit directly on `site`: `site.goto()`, `site.labels`, `site.heading`,
+`site.serviceCards`, `site.facebookLinks` and `site.boxes()`. CSS selectors live only in `pages/`; specs use
+these names.
+
+**Known site bugs** make some tests fail until the bug is fixed. Those tests call `knownIssue('KI-004')`
+(`tests/utils/knownIssues.ts`) as their first line:
+- The run stays green and the report shows the test as an expected failure, linked to the KI.
+- When the bug is fixed, the test passes, and Playwright flags that as "expected to fail, but passed". Then
+  close the KI and remove the call.
 
 ## Writing a test
 
