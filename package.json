@@ -43,7 +43,8 @@
     "allure:browsers": "allure open allure-report/by-browser",
     "typecheck": "tsc -p . && tsc -p perf",
     "lint": "eslint .",
-    "check": "npm run typecheck && npm run lint"
+    "check": "npm run typecheck && npm run lint",
+    "export:testiny:run": "node tools/export-testiny-csv.mjs --run"
   },
   "keywords": [],
   "author": "",

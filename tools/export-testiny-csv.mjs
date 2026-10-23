@@ -1,10 +1,12 @@
 // Builds a CSV of test cases for Testiny's "Test cases > Import" from the last test run:
 // labels (platform, epic, feature, severity...) from allure-results, named test.step() blocks
 // from Playwright's JSON report.
-// Usage: node tools/export-testiny-csv.mjs   (after a full `npx playwright test`)
+// Usage: npm run export:testiny:run (runs the UI tests with the JSON report, then exports), or
+//        npm run export:testiny after a run made with JSON_REPORT=1.
 // Import settings in Testiny: Steps delimiter = "rows", Folder delimiter = ">".
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const resultsDir = 'allure-results';
 const jsonReport = 'reports/playwright-results.json';
@@ -28,6 +30,15 @@ function collect(suite, titles) {
     const unique = [...new Set(steps)];
     if (!stepsByTest.has(key) || unique.length > stepsByTest.get(key).length) stepsByTest.set(key, unique);
   }
+}
+// --run: first run the UI tests (Chrome, desktop + phone) with the JSON report on and assertion screenshots off.
+if (process.argv.includes('--run')) {
+  const env = { ...process.env, JSON_REPORT: '1', ASSERT_SCREENSHOTS: '0' };
+  spawnSync('npx playwright test --grep-invert @a11y --project=chromium --project=mobile-chrome', { stdio: 'inherit', env, shell: true });
+}
+if (!existsSync(jsonReport)) {
+  console.error(`${jsonReport} not found: run the tests with JSON_REPORT=1 first (npm run export:testiny:run does both).`);
+  process.exit(1);
 }
 // Top-level suites are the spec files; describe() blocks are nested below them.
 for (const fileSuite of JSON.parse(readFileSync(jsonReport, 'utf8')).suites) collect(fileSuite, []);

@@ -114,8 +114,12 @@ export default defineConfig({
   reporter: [
     ['list'],
     ['html', { open: 'never' }],
-    /* Machine-readable results; tools/export-testiny-csv.mjs reads the named test steps from it. */
-    ['json', { outputFile: 'reports/playwright-results.json' }],
+    /*
+     * Machine-readable results, only with JSON_REPORT=1 (npm run export:testiny:run): tools/export-testiny-csv.mjs
+     * reads the named test steps from it. Off by default because it embeds every screenshot as text and grows
+     * past what Node can write (RangeError: Invalid string length) on multi-browser runs.
+     */
+    ...(process.env.JSON_REPORT ? [['json', { outputFile: 'reports/playwright-results.json' }] as ReporterDescription] : []),
     [
       'allure-playwright',
       {

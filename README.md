@@ -361,7 +361,8 @@ question. Plain `npx playwright test` doesn't upload. Each test's Desktop / Mobi
 browsers one after another, they all report into that one Testiny run; the last browser closes it.
 
 Uploaded results appear under Testiny's **Automation** tab. To also list the tests under **Test cases**
-(for test plans and manual runs), run the suite, then `npm run export:testiny`. That writes
+(for test plans and manual runs), run `npm run export:testiny:run`. It runs the UI tests on the local copy
+with Playwright's JSON report on (`JSON_REPORT=1`) and assertion screenshots off, then exports. That writes
 `reports/testiny-test-cases.csv` (folders `Desktop|Mobile > site > feature > story`, priority from the
 Allure severity, steps from `test.step(...)` blocks). Import it in Testiny under Test cases > Import with
 the steps delimiter set to **rows** and the folder delimiter **>**.
