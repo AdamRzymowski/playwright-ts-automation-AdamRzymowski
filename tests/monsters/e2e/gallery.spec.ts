@@ -81,15 +81,18 @@ test.describe('Gallery', () => {
 
   test('Every gallery photo has alt text and a caption', async ({ site }) => {
     await site.goto();
-    const items = site.gallery.allItems;
-    const count = await items.count();
-    expect(count).toBeGreaterThan(0);
-
-    for (let i = 0; i < count; i++) {
-      const item = items.nth(i);
-      await expect.soft(site.gallery.imageOf(item)).toHaveAttribute('alt', /\S/);
-      await expect.soft(site.gallery.captionOf(item)).not.toBeEmpty();
-    }
+    // Read every photo in one go and check them together: one assertion per photo (~120 in total, each with
+    // a proof screenshot) took over 30 s on CI in phone view. The messages list any photo that fails.
+    const photos = await site.gallery.allItems.evaluateAll((items) =>
+      items.map((item) => ({
+        photo: item.getAttribute('data-testid') ?? item.querySelector('img')?.getAttribute('src') ?? '?',
+        alt: item.querySelector('img')?.getAttribute('alt')?.trim() ?? '',
+        caption: item.querySelector('figcaption')?.textContent?.trim() ?? '',
+      })),
+    );
+    expect(photos.length, 'number of gallery photos').toBeGreaterThan(0);
+    expect.soft(photos.filter((p) => !p.alt).map((p) => p.photo), 'photos without alt text').toEqual([]);
+    expect.soft(photos.filter((p) => !p.caption).map((p) => p.photo), 'photos without a caption').toEqual([]);
   });
 
   test.describe('Lightbox', () => {

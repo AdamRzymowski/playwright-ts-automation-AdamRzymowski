@@ -62,7 +62,12 @@ test.describe('Home page', () => {
       [...new Set(imgs.map((img) => (img as HTMLImageElement).src))],
     );
     expect(sources.length).toBeGreaterThan(10);
-    const statuses = await Promise.all(sources.map(async (src) => [src, (await request.head(src)).status()] as const));
+    // 6 at a time, like a browser, with 30 s per file: ~60 requests at once timed out on CI.
+    const statuses: (readonly [string, number])[] = [];
+    for (let i = 0; i < sources.length; i += 6) {
+      const batch = sources.slice(i, i + 6);
+      statuses.push(...(await Promise.all(batch.map(async (src) => [src, (await request.head(src, { timeout: 30_000 })).status()] as const))));
+    }
     for (const [src, status] of statuses) {
       expect.soft(status, src).toBe(200);
     }
