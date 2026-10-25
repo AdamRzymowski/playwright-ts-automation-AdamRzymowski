@@ -426,6 +426,7 @@ for (const [name, status] of results) {
 if (reports.length > 1 && existsSync('allure-report/by-browser/index.html')) {
   console.log('  Open all Allure reports in your browser: npm run allure:browsers');
 }
-if (testiny) console.log(`  Testiny: results uploaded as run "${testinyRunName}" (Automation tab).`);
+// The Testiny reporter doesn't fail the run on upload errors; they appear above as "testiny-reporter: ... errors".
+if (testiny) console.log(`  Testiny: results sent as run "${testinyRunName}" (Automation tab). If a line above says "testiny-reporter: finished with errors", the upload failed.`);
 console.log('=========================================\n');
 process.exit(results.some(([, s]) => s !== 0) ? 1 : 0);

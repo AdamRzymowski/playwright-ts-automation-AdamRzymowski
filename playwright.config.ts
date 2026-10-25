@@ -123,8 +123,11 @@ export const reporters: ReporterDescription[] = [
 export default defineConfig({
   testDir: './tests',
   globalSetup: './global-setup.ts',
-  /* Per-test limit (Playwright's default, made explicit) and the default wait of each expect(). */
-  timeout: 30_000,
+  /*
+   * Per-test limit and the default wait of each expect(). CI machines are slower, and every step and assertion
+   * takes a proof screenshot (full-page in phone view), so tests get 60 s there; 30 s elsewhere.
+   */
+  timeout: process.env.CI ? 60_000 : 30_000,
   expect: { timeout: 5_000 },
   /* Run tests in files in parallel */
   fullyParallel: true,

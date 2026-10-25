@@ -174,7 +174,7 @@ Point the tests at another copy of the site with `MONSTERS_ENV` / `MONSTERS_URL`
   - waiting for the site's script: at most 15 s, failing with "Site script did not start… (page slow to
     load)";
   - an assertion waits up to 5 s;
-  - a whole test: at most 30 s.
+  - a whole test: at most 30 s (60 s on CI).
 
 ### Continuous integration (GitHub Actions)
 

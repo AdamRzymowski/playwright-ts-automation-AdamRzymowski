@@ -98,7 +98,8 @@ and KNOWN-ISSUES.md for open site bugs.
 - The site scrolls smoothly; scroll with `behavior: 'instant'` before tapping, or taps land mid-animation.
 - FormSubmit can take over 30 s to confirm a real submission (KNOWN-ISSUES KI-012).
 - The `edge` projects need Microsoft Edge installed locally (`channel: 'msedge'`).
-- Live and dev runs retry once (CI twice), so a one-off slow load shows as "flaky", not failed.
+- Live and dev runs retry once (CI twice), so a one-off slow load shows as "flaky", not failed. Tests get 30 s,
+  60 s on CI (slower machines plus proof screenshots).
 - k6 browser tests: no template strings (`` `…${x}` ``) inside functions passed to `page.evaluate`, because
   k6 1.1 fails on them with "SyntaxError: Unexpected end of input". Build strings with `+` instead.
 
