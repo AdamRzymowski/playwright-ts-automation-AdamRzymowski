@@ -183,10 +183,17 @@ Point the tests at another copy of the site with `MONSTERS_ENV` / `MONSTERS_URL`
 | When | What |
 | --- | --- |
 | Every push to `main` and every pull request | `npm run check`, then the `@smoke` UI tests on Chrome (desktop and phone view) against the live site |
-| Every night at 02:00 UTC, and on demand (Actions > Tests > Run workflow) | `npm run check`, then all UI tests, each browser separately at desktop and phone size, against the live site |
+| Every night at 02:00 UTC, and on demand (Actions > Tests > Run workflow) | `npm run check`, then all UI tests against the live site in **6 parallel jobs** (Chrome, Firefox, Edge at desktop and phone size), then one report job that merges them |
 
 - **Reports:** the Allure reports and PDFs are kept as downloadable artifacts on the run's page (14 days for
   smoke, 30 days for regression).
+- **Parallel regression:**
+  - Each browser job saves a Playwright *blob report* (`BLOB_REPORT=<project>`).
+  - The report job runs `npx playwright merge-reports --config merge.config.ts`, which replays all six
+    through the normal reporters: one HTML report, one Allure report, one PDF and one Testiny run.
+  - The whole regression takes about as long as the slowest browser (phone-size Chrome), instead of the
+    sum of all six.
+  - `merge-allure-reporter.ts` works around an Allure reporter crash when merging.
 - **Testiny:** live runs upload to Testiny when the repository has the `TESTINY_API_KEY` and
   `TESTINY_PROJECT` secrets (GitHub > Settings > Secrets and variables > Actions). They're named
   `<DD.MM.YY>-live-ci-<run number>`, e.g. `22.10.26-live-ci-57`.
@@ -384,6 +391,7 @@ tests/monsters/mobile/   Phone-only layout specs (mobile-chrome, mobile-firefox,
 tests/utils/             Faker data builders, multipart parser, accessibility helper, knownIssue()
 perf/                    k6 performance tests (smoke, load, soak) + perf/lib (shared, report)
 .github/workflows/       CI: check + smoke on push/PR, full regression nightly
+merge.config.ts          CI: merges the parallel browser runs (merge-allure-reporter.ts for Allure)
 tsconfig.json            Type-check settings (perf/tsconfig.json for k6); eslint.config.mjs: lint rules
 ```
 

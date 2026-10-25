@@ -92,6 +92,34 @@ const testiny: ReporterDescription[] = process.env.TESTINY_UPLOAD
     ]
   : [];
 
+/* list = console output, html = Playwright report, allure = graphical dashboard (npm run allure).
+   Also used by merge.config.ts when CI merges the per-browser blob reports. */
+export const reporters: ReporterDescription[] = [
+  ['list'],
+  ['html', { open: 'never' }],
+  /*
+   * Machine-readable results, only with JSON_REPORT=1 (npm run export:testiny:run): tools/export-testiny-csv.mjs
+   * reads the named test steps from it. Off by default because it embeds every screenshot as text and grows
+   * past what Node can write (RangeError: Invalid string length) on multi-browser runs.
+   */
+  ...(process.env.JSON_REPORT ? [['json', { outputFile: 'reports/playwright-results.json' }] as ReporterDescription] : []),
+  [
+    'allure-playwright',
+    {
+      resultsDir: 'allure-results',
+      detail: true,
+      suiteTitle: true,
+      environmentInfo: {
+        'Monsters environment': MONSTERS_ENV,
+        'Monsters URL': MONSTERS_URL,
+        Node: process.version,
+        OS: process.platform,
+      },
+    },
+  ],
+  ...testiny,
+];
+
 export default defineConfig({
   testDir: './tests',
   globalSetup: './global-setup.ts',
@@ -110,32 +138,12 @@ export default defineConfig({
   retries: process.env.RETRIES ? Number(process.env.RETRIES) : process.env.CI ? 2 : MONSTERS_IS_LOCAL ? 0 : 1,
   /* Parallel workers: Playwright picks half the CPU cores locally; cap it on CI. */
   workers: process.env.CI ? 4 : undefined,
-  /* list = console output, html = Playwright report, allure = graphical dashboard (npm run allure) */
-  reporter: [
-    ['list'],
-    ['html', { open: 'never' }],
-    /*
-     * Machine-readable results, only with JSON_REPORT=1 (npm run export:testiny:run): tools/export-testiny-csv.mjs
-     * reads the named test steps from it. Off by default because it embeds every screenshot as text and grows
-     * past what Node can write (RangeError: Invalid string length) on multi-browser runs.
-     */
-    ...(process.env.JSON_REPORT ? [['json', { outputFile: 'reports/playwright-results.json' }] as ReporterDescription] : []),
-    [
-      'allure-playwright',
-      {
-        resultsDir: 'allure-results',
-        detail: true,
-        suiteTitle: true,
-        environmentInfo: {
-          'Monsters environment': MONSTERS_ENV,
-          'Monsters URL': MONSTERS_URL,
-          Node: process.version,
-          OS: process.platform,
-        },
-      },
-    ],
-    ...testiny,
-  ],
+  /*
+   * BLOB_REPORT=<name> (CI): each parallel browser job only saves a blob report (blob-report/report-<name>.zip);
+   * the merge job then replays all of them through `reporters` (merge.config.ts): one Allure report, one
+   * Testiny run. Otherwise the normal reporters run directly.
+   */
+  reporter: process.env.BLOB_REPORT ? [['list'], ['blob', { fileName: `report-${process.env.BLOB_REPORT}.zip` }]] : reporters,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL: MONSTERS_URL,

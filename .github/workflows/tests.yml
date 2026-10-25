@@ -3,7 +3,9 @@
 #     1. check  - type-check + lint (no site access)
 #     2. smoke  - @smoke UI tests on Chrome, desktop and phone view, against the live site
 #   Every night (02:00 UTC) and on demand (Actions tab > Tests > Run workflow):
-#     3. regression - all UI tests, each browser separately at desktop and phone size, against the live site
+#     3. regression - all UI tests against the live site: 6 jobs at the same time (Chrome, Firefox, Edge at
+#                     desktop and phone size), each saving a blob report
+#     4. regression-report - merges them: one Allure report, one PDF, one Testiny run
 # Live runs upload to Testiny when the TESTINY_API_KEY and TESTINY_PROJECT secrets are set, named
 # <DD.MM.YY>-live-ci-<run number> (e.g. 22.10.26-live-ci-57). Reports are kept as downloadable artifacts.
 # Never runs: real form submissions (they email the owner), k6 performance tests, BrowserStack.
@@ -82,11 +84,54 @@ jobs:
           retention-days: 14
 
   regression:
-    name: Full UI regression (live)
+    name: UI regression - ${{ matrix.name }}
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: check
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: chromium, browser: chromium, set: desktop, name: Chrome }
+          - { project: firefox, browser: firefox, set: desktop, name: Firefox }
+          - { project: edge, browser: msedge, set: desktop, name: Edge }
+          - { project: mobile-chrome, browser: chromium, set: mobile, name: Chrome phone }
+          - { project: mobile-firefox, browser: firefox, set: mobile, name: Firefox phone }
+          - { project: mobile-edge, browser: msedge, set: mobile, name: Edge phone }
+    env:
+      # Run this job's browser only when its set (desktop / mobile) was chosen; nightly runs do both.
+      SELECTED: ${{ contains(inputs.browsers || 'desktop,mobile', matrix.set) }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.SELECTED == 'true'
+      - uses: actions/setup-node@v4
+        if: env.SELECTED == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: env.SELECTED == 'true'
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+        if: env.SELECTED == 'true'
+      - name: All UI tests on ${{ matrix.name }}
+        if: env.SELECTED == 'true'
+        run: npx playwright test --grep-invert @a11y --project=${{ matrix.project }}
+        env:
+          BLOB_REPORT: ${{ matrix.project }}
+      - uses: actions/upload-artifact@v4
+        if: always() && env.SELECTED == 'true'
+        with:
+          name: blob-report-${{ matrix.project }}
+          path: blob-report/
+          retention-days: 3
+
+  regression-report:
+    name: Regression report (Allure, PDF, Testiny)
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.regression.result != 'skipped' }}
+    needs: regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -94,18 +139,31 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium firefox msedge
+      # Only for the PDF (it prints with Chrome and lists the browser versions).
+      - run: npx playwright install --with-deps chromium firefox
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: all-blob-reports
+          merge-multiple: true
       - name: Testiny run name
-        run: echo "TESTINY_RUN_NAME=$(date -u +%d.%m.%y)-live-ci-${{ github.run_number }}" >> "$GITHUB_ENV"
-      - name: All UI tests, one browser at a time (Allure report + PDF per browser)
-        # The runner uploads live runs to Testiny when the secrets are set, all browsers in one run.
-        run: node tools/run-tests.mjs --suite=ui --env=live --browsers=${{ inputs.browsers || 'desktop,mobile' }} --no-report
+        if: env.TESTINY_API_KEY != '' && env.TESTINY_PROJECT != ''
+        run: |
+          echo "TESTINY_UPLOAD=1" >> "$GITHUB_ENV"
+          echo "TESTINY_RUN_NAME=$(date -u +%d.%m.%y)-live-ci-${{ github.run_number }}" >> "$GITHUB_ENV"
+      - name: Merge all browsers (HTML + Allure results, upload to Testiny)
+        run: npx playwright merge-reports --config merge.config.ts ./all-blob-reports
+      - name: Allure report and PDF
+        if: always()
+        run: |
+          npx allure generate allure-results --output allure-report --name "UI regression (CI ${{ github.run_number }})"
+          node tools/report-pdf.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: regression-reports-${{ github.run_number }}
           path: |
             allure-report/
+            playwright-report/
             reports/*.pdf
-            reports/*.md
           retention-days: 30
