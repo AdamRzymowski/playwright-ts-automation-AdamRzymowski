@@ -197,6 +197,12 @@ Point the tests at another copy of the site with `MONSTERS_ENV` / `MONSTERS_URL`
 - **Testiny:** live runs upload to Testiny when the repository has the `TESTINY_API_KEY` and
   `TESTINY_PROJECT` secrets (GitHub > Settings > Secrets and variables > Actions). They're named
   `<DD.MM.YY>-live-ci-<run number>`, e.g. `22.10.26-live-ci-57`.
+- **Accessibility workflow** (`.github/workflows/accessibility.yml`, separate on purpose):
+  - Runs the `@a11y` tests every night at 03:00 UTC, and on demand (Actions > Accessibility > Run workflow).
+  - Same parallel setup: 6 browser jobs, then one merged Allure report, PDF and Testiny run
+    (`<DD.MM.YY>-live-a11y-ci-<run number>`, source "playwright-a11y").
+  - It is expected to fail until the open accessibility bugs (KI-004, KI-005, KI-011) are fixed. Keeping it
+    separate keeps the main **Tests** workflow green.
 - **Never run in CI:** real form submissions, k6 performance tests and BrowserStack.
 
 ## Reports
@@ -390,7 +396,7 @@ tests/monsters/e2e/      Desktop specs (also run in phone view on every browser)
 tests/monsters/mobile/   Phone-only layout specs (mobile-chrome, mobile-firefox, mobile-edge)
 tests/utils/             Faker data builders, multipart parser, accessibility helper, knownIssue()
 perf/                    k6 performance tests (smoke, load, soak) + perf/lib (shared, report)
-.github/workflows/       CI: check + smoke on push/PR, full regression nightly
+.github/workflows/       CI: tests.yml (check + smoke on push/PR, regression nightly), accessibility.yml (nightly)
 merge.config.ts          CI: merges the parallel browser runs (merge-allure-reporter.ts for Allure)
 tsconfig.json            Type-check settings (perf/tsconfig.json for k6); eslint.config.mjs: lint rules
 ```

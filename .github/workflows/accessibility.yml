@@ -1,0 +1,114 @@
+# Accessibility (WCAG 2.2 AA) tests on GitHub Actions, separate from the "Tests" workflow.
+# Known site bugs (KI-004, KI-005, KI-011 in KNOWN-ISSUES.md) are expected to make this workflow fail
+# until they are fixed; keeping it separate keeps the main Tests workflow green.
+#   Every night (03:00 UTC, after the UI regression) and on demand (Actions > Accessibility > Run workflow):
+#     1. accessibility        - the @a11y tests against the live site: 6 jobs at the same time
+#                               (Chrome, Firefox, Edge at desktop and phone size), each saving a blob report
+#     2. accessibility-report - merges them: one Allure report, one PDF, one Testiny run
+# Testiny run name: <DD.MM.YY>-live-a11y-ci-<run number> (source "playwright-a11y"), when the
+# TESTINY_API_KEY and TESTINY_PROJECT secrets are set.
+name: Accessibility
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      browsers:
+        description: 'Browsers'
+        type: choice
+        options: ['desktop,mobile', 'desktop', 'mobile']
+        default: desktop,mobile
+
+concurrency:
+  group: accessibility-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MONSTERS_ENV: live
+  CI: 'true'
+  TESTINY_API_KEY: ${{ secrets.TESTINY_API_KEY }}
+  TESTINY_PROJECT: ${{ secrets.TESTINY_PROJECT }}
+  TESTINY_SOURCE: playwright-a11y
+
+jobs:
+  accessibility:
+    name: Accessibility - ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: chromium, browser: chromium, set: desktop, name: Chrome }
+          - { project: firefox, browser: firefox, set: desktop, name: Firefox }
+          - { project: edge, browser: msedge, set: desktop, name: Edge }
+          - { project: mobile-chrome, browser: chromium, set: mobile, name: Chrome phone }
+          - { project: mobile-firefox, browser: firefox, set: mobile, name: Firefox phone }
+          - { project: mobile-edge, browser: msedge, set: mobile, name: Edge phone }
+    env:
+      SELECTED: ${{ contains(inputs.browsers || 'desktop,mobile', matrix.set) }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.SELECTED == 'true'
+      - uses: actions/setup-node@v4
+        if: env.SELECTED == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: env.SELECTED == 'true'
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+        if: env.SELECTED == 'true'
+      - name: Accessibility tests on ${{ matrix.name }}
+        if: env.SELECTED == 'true'
+        run: npx playwright test --grep @a11y --project=${{ matrix.project }}
+        env:
+          BLOB_REPORT: ${{ matrix.project }}
+      - uses: actions/upload-artifact@v4
+        if: always() && env.SELECTED == 'true'
+        with:
+          name: a11y-blob-report-${{ matrix.project }}
+          path: blob-report/
+          retention-days: 3
+
+  accessibility-report:
+    name: Accessibility report (Allure, PDF, Testiny)
+    if: ${{ !cancelled() && needs.accessibility.result != 'skipped' }}
+    needs: accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a11y-blob-report-*
+          path: all-blob-reports
+          merge-multiple: true
+      - name: Testiny run name
+        if: env.TESTINY_API_KEY != '' && env.TESTINY_PROJECT != ''
+        run: |
+          echo "TESTINY_UPLOAD=1" >> "$GITHUB_ENV"
+          echo "TESTINY_RUN_NAME=$(date -u +%d.%m.%y)-live-a11y-ci-${{ github.run_number }}" >> "$GITHUB_ENV"
+      - name: Merge all browsers (HTML + Allure results, upload to Testiny)
+        run: npx playwright merge-reports --config merge.config.ts ./all-blob-reports
+      - name: Allure report and PDF
+        if: always()
+        run: |
+          npx allure generate allure-results --output allure-report --name "Accessibility (CI ${{ github.run_number }})"
+          node tools/report-pdf.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accessibility-reports-${{ github.run_number }}
+          path: |
+            allure-report/
+            playwright-report/
+            reports/*.pdf
+          retention-days: 30
