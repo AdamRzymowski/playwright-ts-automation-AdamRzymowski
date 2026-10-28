@@ -182,8 +182,13 @@ Point the tests at another copy of the site with `MONSTERS_ENV` / `MONSTERS_URL`
 
 | When | What |
 | --- | --- |
-| Every push to `main` and every pull request | `npm run check`, then the `@smoke` UI tests on Chrome (desktop and phone view) against the live site |
-| Every night at 02:00 UTC, and on demand (Actions > Tests > Run workflow) | `npm run check`, then all UI tests against the live site in **6 parallel jobs** (Chrome, Firefox, Edge at desktop and phone size), then one report job that merges them |
+| Every push to `main` and every pull request | `npm run check` only (type-check + lint, no UI tests) |
+| By hand, e.g. after a site release (Actions > Tests > Run workflow), **Which UI tests: regression** (default) | `npm run check`, then all UI tests against the live site in **6 parallel jobs** (Chrome, Firefox, Edge at desktop and phone size), then one report job that merges them (about 20 min) |
+| By hand, **Which UI tests: smoke** | `npm run check`, then the `@smoke` UI tests on Chrome, desktop and phone view (about 3 min) |
+
+There are no scheduled (nightly) runs: they were stopped on 28.10.26. To bring them back, add a `schedule:`
+trigger to the workflow, preferably at an off-peak minute such as `37 2 * * *`, since GitHub delays runs set
+for the top of the hour.
 
 - **Reports:** the Allure reports and PDFs are kept as downloadable artifacts on the run's page (14 days for
   smoke, 30 days for regression).
@@ -198,7 +203,7 @@ Point the tests at another copy of the site with `MONSTERS_ENV` / `MONSTERS_URL`
   `TESTINY_PROJECT` secrets (GitHub > Settings > Secrets and variables > Actions). They're named
   `<DD.MM.YY>-live-ci-<run number>`, e.g. `22.10.26-live-ci-57`.
 - **Accessibility workflow** (`.github/workflows/accessibility.yml`, separate on purpose):
-  - Runs the `@a11y` tests every night at 03:00 UTC, and on demand (Actions > Accessibility > Run workflow).
+  - Runs the `@a11y` tests only when started by hand (Actions > Accessibility > Run workflow).
   - Same parallel setup: 6 browser jobs, then one merged Allure report, PDF and Testiny run
     (`<DD.MM.YY>-live-a11y-ci-<run number>`, source "playwright-a11y").
   - It is expected to fail until the open accessibility bugs (KI-004, KI-005, KI-011) are fixed. Keeping it
@@ -396,7 +401,7 @@ tests/monsters/e2e/      Desktop specs (also run in phone view on every browser)
 tests/monsters/mobile/   Phone-only layout specs (mobile-chrome, mobile-firefox, mobile-edge)
 tests/utils/             Faker data builders, multipart parser, accessibility helper, knownIssue()
 perf/                    k6 performance tests (smoke, load, soak) + perf/lib (shared, report)
-.github/workflows/       CI: tests.yml (check + smoke on push/PR, regression nightly), accessibility.yml (nightly)
+.github/workflows/       CI: tests.yml (check on push/PR; UI tests by hand), accessibility.yml (by hand)
 merge.config.ts          CI: merges the parallel browser runs (merge-allure-reporter.ts for Allure)
 tsconfig.json            Type-check settings (perf/tsconfig.json for k6); eslint.config.mjs: lint rules
 ```

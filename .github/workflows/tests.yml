@@ -1,11 +1,12 @@
 # Automated checks on GitHub Actions.
 #   Every push to main and every pull request:
-#     1. check  - type-check + lint (no site access)
-#     2. smoke  - @smoke UI tests on Chrome, desktop and phone view, against the live site
-#   Every night (02:00 UTC) and on demand (Actions tab > Tests > Run workflow):
-#     3. regression - all UI tests against the live site: 6 jobs at the same time (Chrome, Firefox, Edge at
-#                     desktop and phone size), each saving a blob report
+#     1. check  - type-check + lint only (no site access, no UI tests)
+#   UI tests only when started by hand, e.g. after a site release (Actions tab > Tests > Run workflow):
+#     2. smoke  - if "smoke" is chosen: @smoke UI tests on Chrome, desktop and phone view (~3 min)
+#     3. regression - if "regression" is chosen (default): all UI tests against the live site, 6 jobs at the
+#                     same time (Chrome, Firefox, Edge at desktop and phone size), each saving a blob report
 #     4. regression-report - merges them: one Allure report, one PDF, one Testiny run
+# No scheduled runs (stopped 28.10.26; add a `schedule:` trigger to bring nightly runs back).
 # Live runs upload to Testiny when the TESTINY_API_KEY and TESTINY_PROJECT secrets are set, named
 # <DD.MM.YY>-live-ci-<run number> (e.g. 22.10.26-live-ci-57). Reports are kept as downloadable artifacts.
 # Never runs: real form submissions (they email the owner), k6 performance tests, BrowserStack.
@@ -15,12 +16,15 @@ on:
   push:
     branches: [main]
   pull_request:
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
+      suite:
+        description: 'Which UI tests'
+        type: choice
+        options: ['regression', 'smoke']
+        default: regression
       browsers:
-        description: 'Browsers for the regression run'
+        description: 'Browsers (regression only)'
         type: choice
         options: ['desktop,mobile', 'desktop', 'mobile']
         default: desktop,mobile
@@ -52,7 +56,7 @@ jobs:
 
   smoke:
     name: Smoke tests (live)
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'smoke'
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -85,7 +89,7 @@ jobs:
 
   regression:
     name: UI regression - ${{ matrix.name }}
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'regression'
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -128,7 +132,7 @@ jobs:
 
   regression-report:
     name: Regression report (Allure, PDF, Testiny)
-    if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.regression.result != 'skipped' }}
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && needs.regression.result != 'skipped' }}
     needs: regression
     runs-on: ubuntu-latest
     timeout-minutes: 20

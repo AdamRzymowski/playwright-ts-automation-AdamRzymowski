@@ -1,7 +1,7 @@
 # Accessibility (WCAG 2.2 AA) tests on GitHub Actions, separate from the "Tests" workflow.
 # Known site bugs (KI-004, KI-005, KI-011 in KNOWN-ISSUES.md) are expected to make this workflow fail
 # until they are fixed; keeping it separate keeps the main Tests workflow green.
-#   Every night (03:00 UTC, after the UI regression) and on demand (Actions > Accessibility > Run workflow):
+#   Only when started by hand (Actions > Accessibility > Run workflow); no scheduled runs since 28.10.26:
 #     1. accessibility        - the @a11y tests against the live site: 6 jobs at the same time
 #                               (Chrome, Firefox, Edge at desktop and phone size), each saving a blob report
 #     2. accessibility-report - merges them: one Allure report, one PDF, one Testiny run
@@ -10,8 +10,6 @@
 name: Accessibility
 
 on:
-  schedule:
-    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       browsers:
