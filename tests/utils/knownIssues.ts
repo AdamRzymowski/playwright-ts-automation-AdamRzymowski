@@ -19,5 +19,6 @@ const KNOWN_ISSUES_URL = 'https://github.com/AdamRzymowski/playwright-ts-automat
 export async function knownIssue(id: KnownIssueId) {
   test.fail(true, `${id}: ${KNOWN_ISSUES[id]}`);
   test.info().annotations.push({ type: 'known issue', description: `${id}: ${KNOWN_ISSUES[id]}` });
-  await allure.issue(id, KNOWN_ISSUES_URL);
+  // allure.issue(url, name): the link shows "KI-xxx" and opens KNOWN-ISSUES.md.
+  await allure.issue(KNOWN_ISSUES_URL, id);
 }

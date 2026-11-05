@@ -11,7 +11,7 @@
 // Runs against the LIVE site always upload to Testiny (owner's rule); other sites only with --testiny or "y".
 // Testiny run name: <DD.MM.YY>-<environment>-<attempt>, e.g. 20.10.26-live-2 (one run per session).
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 
 try {
@@ -303,13 +303,17 @@ const PROJECT_NAMES = {
   'bs-mac-chrome': 'Mac Chrome (BrowserStack)',
 };
 const reports = []; // [run name, allure folder, pdf]
+// Every browser run's Allure results are also collected here, so the session ends with one report and one PDF
+// covering all browsers (the one to share with clients and stakeholders). Cleared at the start of each session.
+const SESSION_RESULTS = 'allure-results-session';
+let sessionReport = null; // [allure folder, pdf]
 
 /** Builds this run's Allure report and PDF before the next run clears allure-results/. */
-function buildReports(slug, title, reportPlaywright) {
+function buildReports(slug, title, reportPlaywright, resultsDir = 'allure-results') {
   let allureDir = null;
   if (reportPlaywright) {
     allureDir = slug ? `allure-report/by-browser/${slug}` : 'allure-report';
-    if (run(`npx allure generate allure-results --output ${allureDir} --name "${title}"`) !== 0) allureDir = null;
+    if (run(`npx allure generate ${resultsDir} --output ${allureDir} --name "${title}"`) !== 0) allureDir = null;
   }
   const pdfRun = spawnSync('node tools/report-pdf.mjs', {
     shell: true,
@@ -320,12 +324,14 @@ function buildReports(slug, title, reportPlaywright) {
       REPORT_PLAYWRIGHT: reportPlaywright ? '1' : '0',
       REPORT_SUFFIX: slug ?? '',
       REPORT_TITLE: title,
+      ALLURE_RESULTS_DIR: resultsDir,
     },
     encoding: 'utf8',
   });
   const pdf = pdfRun.stdout?.match(/PDF report: (.+)/)?.[1]?.trim() ?? null;
   if (!pdf) console.error(`\nCould not create the PDF report:\n${pdfRun.stderr ?? ''}`);
   reports.push([title, allureDir, pdf]);
+  return [allureDir, pdf];
 }
 
 if (playwrightSuites.length) {
@@ -356,6 +362,7 @@ if (playwrightSuites.length) {
   } else {
     // One complete run per browser, one after another, each with its own reports.
     // All browsers report into the same Testiny run; only the last Playwright run closes it.
+    rmSync(SESSION_RESULTS, { recursive: true, force: true });
     const lastIndex = browserProjects.length - 1;
     const keepOpen = (i) => (testiny && i < lastIndex ? { TESTINY_COMPLETE_RUN: '0' } : {});
     for (const [i, project] of browserProjects.entries()) {
@@ -363,7 +370,12 @@ if (playwrightSuites.length) {
       console.log(`\n================ ${title} ================`);
       results.push([title, run(`npx playwright test${excludeFilter}${flags([project])}`, keepOpen(i))]);
       buildReports(project, title, true);
+      if (existsSync('allure-results')) cpSync('allure-results', SESSION_RESULTS, { recursive: true });
     }
+    // One report and PDF for the whole session, every browser together.
+    console.log('\n================ Report for all browsers ================');
+    sessionReport = buildReports('all-browsers', `${name} on all browsers`, true, SESSION_RESULTS);
+    reports.pop(); // listed separately in the summary
     // A small start page linking the per-browser Allure reports.
     const links = reports
       .filter(([, dir]) => dir?.startsWith('allure-report/by-browser/'))
@@ -422,6 +434,11 @@ for (const [name, status] of results) {
   console.log(`  ${status === 0 ? 'PASSED' : 'FAILED'}  ${name}`);
   if (allureDir) console.log(`          Allure: ${allureDir}/`);
   if (pdf) console.log(`          PDF:    ${pdf}`);
+}
+if (sessionReport?.[1]) {
+  console.log(`  Report for clients and stakeholders (all browsers, with charts):`);
+  console.log(`          PDF:    ${sessionReport[1]}`);
+  if (sessionReport[0]) console.log(`          Allure: ${sessionReport[0]}/`);
 }
 if (reports.length > 1 && existsSync('allure-report/by-browser/index.html')) {
   console.log('  Open all Allure reports in your browser: npm run allure:browsers');

@@ -124,6 +124,8 @@ against the live site.
 its own complete run (Chrome, then Firefox, then Edge, ...), with its own Allure report
 (`allure-report/by-browser/<browser>/`, plus a start page linking them all) and its own PDF
 (`reports/test-report-<date>_<time>-<browser>.pdf`). The summary shows PASSED/FAILED per browser.
+At the end it also builds **one report for all browsers together**: `allure-report/by-browser/all-browsers/`
+and `reports/test-report-<date>_<time>-all-browsers.pdf`, the PDF to share with clients and stakeholders.
 Add `--together` to run all browsers in one combined run with a single report instead.
 
 **Watch the browser.** Answer *yes* to "Show the browser windows while testing?" (or add `--headed`) to see
@@ -297,15 +299,26 @@ the test code.
 | Output | Where | How |
 | --- | --- | --- |
 | Allure report (interactive) | `allure-report/` on your PC, history in `allure-history/` | `npm run allure` / `npm run allure:open` |
-| **PDF report** | `reports/test-report-<date>_<time>.pdf` on your PC | Created automatically by `npm run tests`; or `npm run report:pdf` after any run |
+| **PDF report** (with charts) | `reports/test-report-<date>_<time>[-<browser>\|-all-browsers].pdf` on your PC (git-ignored) | Created automatically by `npm run tests` (one per browser plus one for all browsers) and by CI (download from the run's artifacts); or `npm run report:pdf` after any run |
 | Screenshots | Inside the Allure and Playwright reports (`test-results/` while running) | **Every test, passed or failed**: a full-page screenshot at the end, plus an "after step" screenshot after each named `test.step()` |
 | Videos, traces | Same | Kept for failed tests; `npm run report:full` keeps every video |
 | Testiny | Testiny cloud, Automation tab | Answer *yes* to the Testiny question in `npm run tests`, or `npm run test:testiny` |
 | k6 dashboards | `reports/k6-<test>-report.html` | `npm run perf:smoke` / `perf:load` / `perf:soak` |
 
-The PDF covers only the run that just finished:
+The PDF covers only the run that just finished. The **first two pages are a visual summary** for clients and
+stakeholders (`tools/report-charts.mjs`):
+- a one-line verdict, and headline figures: pass rate, tests, failed, flaky, known issues, duration;
+- a donut of all outcomes, and bars per browser/device;
+- a feature × browser grid, bars by severity, and a chart of how long tests take;
+- the known issues (expected failures, with their KI number) and the flaky tests (passed on a retry).
+
+Outcomes use fixed status colours (green passed, orange flaky, red failed, amber skipped), always together
+with a label. Each test counts once per browser by its final attempt, so a retried test is never counted
+twice. `REPORT_HTML=1 npm run report:pdf` also saves the HTML the PDF is printed from.
+
+The detail pages follow:
 - **Run details**: site and app version, test-code commit, machine, Node, Playwright and exact browser versions
-- **Totals** and pass bar; **by browser/device** (pass rate, time); **by feature and browser** grid; **by severity**
+- **By browser/device** table (pass rate, time)
 - **Failures**: where (file:line), severity, which browsers failed/passed, the failing step, the error with
   expected/received, and a screenshot
 - **Skipped tests** with the reason, the **slowest tests**, k6 thresholds and timings when performance ran

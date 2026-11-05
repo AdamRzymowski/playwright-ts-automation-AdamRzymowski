@@ -1,14 +1,18 @@
-// Turns the last test run into a detailed PDF report: reports/test-report-<date>.pdf (git-ignored).
-// Reads allure-results/ (Playwright tests) and, if present, reports/k6-*-summary.json (performance).
-// Usage: node tools/report-pdf.mjs   (also run automatically by `npm run tests`)
+// Turns the last test run into a PDF report for the team, clients and stakeholders:
+// reports/test-report-<date>[-<suffix>].pdf (git-ignored).
+// Page 1-2: visual summary (verdict, headline figures, charts by outcome, browser, feature, severity, duration,
+// known issues, flaky tests). Then the details: run environment, failures with screenshots, every test.
+// Reads ALLURE_RESULTS_DIR (default allure-results/) and, if present, reports/k6-*-summary.json (performance).
+// Usage: node tools/report-pdf.mjs   (also run automatically by `npm run tests` and by CI)
 import { chromium, firefox } from '@playwright/test';
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import { join } from 'node:path';
+import { COLORS, STATUS_LABEL, CHART_CSS, columns, donut, legend, stackedBars } from './report-charts.mjs';
 
-const RESULTS = 'allure-results';
+const RESULTS = process.env.ALLURE_RESULTS_DIR ?? 'allure-results';
 const OUT_DIR = 'reports';
 // Set by tools/run-tests.mjs so the PDF only shows this run: RUN_STARTED (ms) and REPORT_PLAYWRIGHT=0 when
 // no Playwright suite ran. On its own, k6 summaries from up to 30 min before the Playwright run are included.
@@ -43,12 +47,31 @@ const projLabel = (p) => PROJECT_LABELS[p] ?? p;
 const SEVERITY_ORDER = ['blocker', 'critical', 'normal', 'minor', 'trivial'];
 
 // ---- Playwright results ------------------------------------------------------------------
-const results =
+const rawResults =
   includePlaywright && existsSync(RESULTS)
     ? readdirSync(RESULTS)
         .filter((f) => f.endsWith('-result.json'))
         .map((f) => JSON.parse(readFileSync(join(RESULTS, f), 'utf8')))
     : [];
+
+// Allure writes one result per attempt. Keep each test's final attempt per browser; a final pass after an
+// earlier failure is "flaky" (passed on retry).
+const attemptsByRun = new Map();
+for (const r of rawResults) {
+  const key = `${r.historyId ?? r.fullName}|${projectOf(r)}`;
+  if (!attemptsByRun.has(key)) attemptsByRun.set(key, []);
+  attemptsByRun.get(key).push(r);
+}
+const results = [...attemptsByRun.values()].map((list) => {
+  list.sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+  const last = list[list.length - 1];
+  last.flakyRun = last.status === 'passed' && list.some((x) => x.status === 'failed' || x.status === 'broken');
+  return last;
+});
+
+/** KNOWN-ISSUES id (e.g. KI-004) of a test marked knownIssue(): an expected failure, reported as passed. */
+const knownIssueOf = (r) =>
+  (r.links ?? []).filter((l) => l.type === 'issue').flatMap((l) => [l.name, l.url]).find((v) => /^KI-\d+$/.test(v ?? '')) ?? null;
 
 const projects = [...new Set(results.map(projectOf))].sort(
   (a, b) => Object.keys(PROJECT_LABELS).indexOf(a) - Object.keys(PROJECT_LABELS).indexOf(b),
@@ -77,6 +100,7 @@ const worst = (runs) => Object.values(runs).map((x) => x.status).sort((a, b) => 
 const all = [...tests.values()].map((t) => ({ ...t, status: worst(t.runs) }));
 const count = (list, pred) => list.filter(pred).length;
 const totals = {
+  flaky: count(results, (r) => r.flakyRun),
   passed: count(results, (r) => r.status === 'passed'),
   failed: count(results, (r) => isFail(r.status)),
   skipped: count(results, (r) => r.status === 'skipped'),
@@ -182,23 +206,6 @@ const byProject = projects.map((p) => {
   };
 });
 
-const features = new Map();
-for (const t of all) {
-  const key = `${t.site} › ${t.feature}`;
-  const f = features.get(key) ?? { key, tests: 0, runs: {} };
-  f.tests++;
-  for (const [p, run] of Object.entries(t.runs)) {
-    f.runs[p] ??= { passed: 0, failed: 0, skipped: 0 };
-    f.runs[p][isFail(run.status) ? 'failed' : run.status]++;
-  }
-  features.set(key, f);
-}
-
-const severities = SEVERITY_ORDER.map((sev) => {
-  const ts = all.filter((t) => t.severity === sev);
-  return { sev, tests: ts.length, failing: count(ts, (t) => isFail(t.status)) };
-}).filter((s) => s.tests);
-
 const failing = all
   .filter((t) => isFail(t.status))
   .sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity));
@@ -208,6 +215,126 @@ const slowest = all
   .filter((x) => x.s !== 'skipped')
   .sort((a, b) => b.d - a.d)
   .slice(0, 10);
+
+// ---- Visual summary (pages 1-2) --------------------------------------------------------------
+const cleanPassed = totals.passed - totals.flaky;
+const outcomeSegs = [
+  { key: 'passed', label: STATUS_LABEL.passed, value: cleanPassed, color: COLORS.passed },
+  { key: 'flaky', label: STATUS_LABEL.flaky, value: totals.flaky, color: COLORS.flaky },
+  { key: 'failed', label: STATUS_LABEL.failed, value: totals.failed, color: COLORS.failed },
+  { key: 'skipped', label: STATUS_LABEL.skipped, value: totals.skipped, color: COLORS.skipped },
+];
+const segsOf = (rs) => [
+  { key: 'passed', value: count(rs, (r) => r.status === 'passed' && !r.flakyRun) },
+  { key: 'flaky', value: count(rs, (r) => r.flakyRun) },
+  { key: 'failed', value: count(rs, (r) => isFail(r.status)) },
+  { key: 'skipped', value: count(rs, (r) => r.status === 'skipped') },
+];
+const noteOf = (rs) => {
+  const p = count(rs, (r) => r.status === 'passed');
+  const f = count(rs, (r) => isFail(r.status));
+  return `${p} of ${p + f} passed · ${pctOf(p, p + f)}`;
+};
+const browserRows = projects.map((p) => {
+  const rs = results.filter((r) => projectOf(r) === p);
+  return { label: projLabel(p), segs: segsOf(rs), note: noteOf(rs) };
+});
+const severityRows = SEVERITY_ORDER.map((sev) => {
+  const rs = results.filter((r) => (label(r, 'severity') ?? 'normal') === sev);
+  return { label: sev[0].toUpperCase() + sev.slice(1), segs: segsOf(rs), note: rs.length ? noteOf(rs) : '' };
+}).filter((row) => row.segs.some((x) => x.value));
+const DURATION_BINS = [
+  ['under 1 s', 0, 1000],
+  ['1-3 s', 1000, 3000],
+  ['3-5 s', 3000, 5000],
+  ['5-10 s', 5000, 10000],
+  ['10-20 s', 10000, 20000],
+  ['20-30 s', 20000, 30000],
+  ['over 30 s', 30000, Infinity],
+];
+const ranDurations = results.filter((r) => r.status !== 'skipped').map((r) => (r.stop ?? 0) - (r.start ?? 0));
+const durationBins = DURATION_BINS.map(([lbl, lo, hi]) => ({ label: lbl, value: count(ranDurations, (d) => d >= lo && d < hi) }));
+const median = (() => {
+  const d = [...ranDurations].sort((a, b) => a - b);
+  return d.length ? d[Math.floor(d.length / 2)] : null;
+})();
+const knownRuns = results.filter((r) => knownIssueOf(r));
+const knownGroups = [...new Set(knownRuns.map(knownIssueOf))].sort().map((ki) => {
+  const rs = knownRuns.filter((r) => knownIssueOf(r) === ki);
+  return { ki, tests: [...new Set(rs.map((r) => r.name))], browsers: projects.filter((p) => rs.some((r) => projectOf(r) === p)).map(projLabel) };
+});
+const flakyTests = [...new Set(results.filter((r) => r.flakyRun).map((r) => r.fullName))].map((fn) => {
+  const rs = results.filter((r) => r.fullName === fn && r.flakyRun);
+  return { name: rs[0].name, browsers: projects.filter((p) => rs.some((r) => projectOf(r) === p)).map(projLabel) };
+});
+const failingDistinct = all.filter((t) => isFail(t.status)).length;
+const verdict = totals.failed
+  ? `<div class="verdict bad">✗ ${failingDistinct} test(s) failed (${totals.failed} run(s) across browsers): see "Failures" for what broke and where.</div>`
+  : total
+    ? `<div class="verdict good">✓ All ${executed} executed test runs passed${totals.flaky ? `, ${totals.flaky} of them only on a retry (flaky)` : ''}.</div>`
+    : '';
+const heatCell = (rs) => {
+  if (!rs.length) return '<td class="na">·</td>';
+  const f = count(rs, (r) => isFail(r.status));
+  const k = count(rs, (r) => r.flakyRun);
+  const p = count(rs, (r) => r.status === 'passed');
+  if (f) return `<td class="h hf">✗ ${f} failed</td>`;
+  if (k) return `<td class="h hk">~ ${k} flaky</td>`;
+  if (p) return `<td class="h hp">✓ ${p}</td>`;
+  return '<td class="h hs">– skipped</td>';
+};
+const featureKeys = [...new Set(all.map((t) => t.feature))].sort();
+const summaryHtml = total
+  ? `${verdict}
+<div class="hero">
+  <div class="tile"><div class="k">Pass rate</div><div class="v">${pctOf(totals.passed, executed)}</div><div class="k">${totals.passed} of ${executed} executed runs</div></div>
+  <div class="tile"><div class="k">Tests</div><div class="v">${all.length}</div><div class="k">× ${projects.length} browser(s)/device(s) = ${total} runs</div></div>
+  <div class="tile"><div class="k"><span class="dot" style="background:${COLORS.failed}"></span>Failed</div><div class="v">${totals.failed}</div><div class="k">${failingDistinct} distinct test(s)</div></div>
+  <div class="tile"><div class="k"><span class="dot" style="background:${COLORS.flaky}"></span>Flaky</div><div class="v">${totals.flaky}</div><div class="k">passed on a retry</div></div>
+  <div class="tile"><div class="k">Known issues</div><div class="v">${knownGroups.length}</div><div class="k">${knownRuns.length} expected failure(s)</div></div>
+  <div class="tile"><div class="k">Duration</div><div class="v">${ms(stopped - started)}</div><div class="k">median test ${ms(median)}</div></div>
+</div>
+
+<h2>Outcome of all test runs</h2>
+<div class="row2">${donut(outcomeSegs, { center: pctOf(totals.passed, executed), caption: 'passed' })}${legend(outcomeSegs, total)}</div>
+<div class="caption">Every test runs once per browser/device. Tests marked with a known issue are expected to fail and count as passed until the issue is fixed.</div>
+
+<h2>Results by browser and device</h2>
+${legend(outcomeSegs.filter((x) => x.value), 0).replace('class="legend"', 'class="legend inline"')}
+${stackedBars(browserRows)}
+
+<h2 class="break">Results by feature and browser</h2>
+<table class="heat"><tr><th>Feature</th><th>Tests</th>${projects.map((p) => `<th class="pc">${esc(projLabel(p))}</th>`).join('')}</tr>
+${featureKeys
+  .map((f) => {
+    const rs = results.filter((r) => (label(r, 'feature') ?? label(r, 'subSuite') ?? 'Other') === f);
+    return `<tr><td>${esc(f)}</td><td>${all.filter((t) => t.feature === f).length}</td>${projects.map((p) => heatCell(rs.filter((r) => projectOf(r) === p))).join('')}</tr>`;
+  })
+  .join('')}</table>
+<div class="caption">✓ all passed (number of tests) · ~ passed on retry · ✗ failed · – skipped · · not run on that browser</div>
+
+<h2>Results by severity</h2>
+${stackedBars(severityRows)}
+
+<h2>How long tests take</h2>
+${columns(durationBins, { caption: 'Number of test runs by duration' })}
+<div class="caption">Number of test runs by duration (all browsers). Median ${ms(median)}; the slowest are listed under "Slowest tests".</div>
+
+${
+  knownGroups.length
+    ? `<h2>Known issues (expected failures)</h2>
+<table><tr><th>Issue</th><th>Tests affected</th><th>Browsers</th></tr>
+${knownGroups.map((g) => `<tr><td><b>${esc(g.ki)}</b></td><td>${g.tests.map(esc).join('<br>')}</td><td>${esc(g.browsers.join(', '))}</td></tr>`).join('')}</table>
+<div class="caption">Open site bugs from KNOWN-ISSUES.md. These tests fail as expected until the bug is fixed; then they report it.</div>`
+    : ''
+}
+${
+  flakyTests.length
+    ? `<h2>Flaky tests (passed on retry)</h2>
+<table><tr><th>Test</th><th>Browsers</th></tr>${flakyTests.map((t) => `<tr><td>${esc(t.name)}</td><td>${esc(t.browsers.join(', '))}</td></tr>`).join('')}</table>`
+    : ''
+}`
+  : '';
 
 const matrixHead = `<th>Result</th><th>Test</th>${projects.map((p) => `<th class="pc">${esc(projLabel(p))}</th>`).join('')}`;
 
@@ -230,45 +357,22 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   .fail pre { white-space: pre-wrap; font: 9px/1.4 Consolas, monospace; background: #fbf3f3; padding: 6px; border-radius: 4px; margin: 5px 0 0; max-height: 200px; overflow: hidden; }
   .fail img { max-width: 60%; border: 1px solid #ddd; margin-top: 6px; } .ok { color: #1a7f45; font-weight: 600; } .bad { color: #c2272d; font-weight: 600; }
   .sev { text-transform: capitalize; } .break { page-break-before: always; }
+${CHART_CSS}
 </style></head><body>
 <h1>Test report${process.env.REPORT_TITLE ? `: ${esc(process.env.REPORT_TITLE)}` : ''}</h1>
 <div class="muted">Playwright TS Automation · ${new Date(isFinite(started) ? started : Date.now()).toLocaleString('en-GB')}${isFinite(started) ? ` · duration ${ms(stopped - started)}` : ''}</div>
 
-<h2>Run details</h2>
+${summaryHtml}
+
+<h2 class="${total ? 'break' : ''}">Run details</h2>
 <table class="kv">${env.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}
 <tr><td>Browsers / devices</td><td>${projects.map(projLabel).map(esc).join(', ') || '—'}</td></tr></table>
 
 ${
   total
-    ? `<div class="cards">
-  <div class="card"><div class="muted">Test runs</div><div class="n">${total}</div><div class="muted">${all.length} tests on ${projects.length} browser(s)/device(s)</div></div>
-  <div class="card passed"><div class="muted">Passed</div><div class="n">${totals.passed}</div><div class="muted">${pctOf(totals.passed, executed)} of executed</div></div>
-  <div class="card failed"><div class="muted">Failed</div><div class="n">${totals.failed}</div><div class="muted">${failing.length} distinct test(s)</div></div>
-  <div class="card skipped"><div class="muted">Skipped</div><div class="n">${totals.skipped}</div><div class="muted">opt-in or not applicable</div></div>
-</div>
-<div class="bar"><i class="p" style="width:${(totals.passed / total) * 100}%"></i><i class="f" style="width:${(totals.failed / total) * 100}%"></i><i class="s" style="width:${(totals.skipped / total) * 100}%"></i></div>
-
-<h2>By browser / device</h2>
+    ? `<h2>By browser / device</h2>
 <table><tr><th>Browser / device</th><th>Tests</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Pass rate</th><th>Test time</th></tr>
 ${byProject.map((b) => `<tr><td>${esc(projLabel(b.p))}</td><td>${b.total}</td><td>${b.passed}</td><td class="${b.failed ? 'bad' : ''}">${b.failed}</td><td>${b.skipped}</td><td>${b.rate}</td><td>${ms(b.time)}</td></tr>`).join('')}</table>
-
-<h2>By feature and browser</h2>
-<table><tr><th>Feature</th><th>Tests</th>${projects.map((p) => `<th class="pc">${esc(projLabel(p))}</th>`).join('')}</tr>
-${[...features.values()]
-  .map(
-    (f) => `<tr><td>${esc(f.key)}</td><td>${f.tests}</td>${projects
-      .map((p) => {
-        const c = f.runs[p];
-        if (!c) return '<td class="na">·</td>';
-        return `<td class="c ${c.failed ? 'f' : c.passed ? 'p' : 's'}">${c.failed ? `${c.failed} ✗` : c.passed ? `${c.passed} ✓` : '–'}</td>`;
-      })
-      .join('')}</tr>`,
-  )
-  .join('')}</table>
-
-<h2>By severity</h2>
-<table><tr><th>Severity</th><th>Tests</th><th>Failing</th></tr>
-${severities.map((s) => `<tr><td class="sev">${esc(s.sev)}</td><td>${s.tests}</td><td class="${s.failing ? 'bad' : 'ok'}">${s.failing}</td></tr>`).join('')}</table>
 
 <h2 class="${failing.length ? 'break' : ''}">Failures (${failing.length})</h2>
 ${
@@ -365,6 +469,8 @@ const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate
 // REPORT_SUFFIX (e.g. a browser name) keeps one PDF per run when the runner tests browsers one by one.
 const suffix = process.env.REPORT_SUFFIX ? `-${process.env.REPORT_SUFFIX}` : '';
 const out = join(OUT_DIR, `test-report-${stamp}${suffix}.pdf`);
+// REPORT_HTML=1 also saves the page the PDF is printed from (handy for checking the layout).
+if (process.env.REPORT_HTML) writeFileSync(out.replace(/\.pdf$/, '.html'), html);
 const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.setContent(html, { waitUntil: 'load' });

@@ -25,6 +25,7 @@ npm-debug.log*
 
 # Allure
 /allure-results/
+/allure-results-session/
 /allure-report/
 /allure-history/
 
