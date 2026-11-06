@@ -158,10 +158,18 @@ async function browserVersion(type, opts = {}) {
     return 'not available';
   }
 }
-const appVersion = await fetch(`${siteUrl}/script.js`)
-  .then((r) => r.text())
-  .then((t) => t.match(/SITE_VERSION = '([^']+)'/)?.[1] ?? '—')
-  .catch(() => '—');
+// The site sets SITE_VERSION in common.js (older versions: script.js).
+let appVersion = '—';
+for (const file of ['common.js', 'script.js']) {
+  const v = await fetch(`${siteUrl}/${file}`)
+    .then((r) => (r.ok ? r.text() : ''))
+    .then((t) => t.match(/SITE_VERSION\s*=\s*['"]([^'"]+)['"]/)?.[1])
+    .catch(() => undefined);
+  if (v) {
+    appVersion = v;
+    break;
+  }
+}
 const env = [
   ['Site', `Substandard Monsters${process.env.MONSTERS_ENV ? ` (${process.env.MONSTERS_ENV})` : ''}: ${siteUrl} · app version ${appVersion}`],
   ['Test code', `${sh('git rev-parse --abbrev-ref HEAD') || '?'} @ ${sh('git rev-parse --short HEAD') || '?'}${sh('git status --porcelain') ? ' (with uncommitted changes)' : ''}`],

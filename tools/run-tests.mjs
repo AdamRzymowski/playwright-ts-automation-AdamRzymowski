@@ -4,6 +4,7 @@
 //   npm run tests -- --suite=ui|a11y|perf|all  (comma-separate several, e.g. --suite=ui,perf)
 //                    --env=live|dev|local  --preview=<pull request number or preview URL>
 //                    --browsers=desktop|mobile|browserstack|all (comma-separate several)
+//                    --projects=chromium,mobile-chrome (exact Playwright projects instead of --browsers)
 //                    --together (one combined run instead of one run per browser)
 //                    --headed (show the browser windows; runs one test at a time unless --workers=N)
 //                    --perf=smoke|load|soak  --testiny  --no-report (still builds the Allure report, just doesn't open it)
@@ -168,7 +169,8 @@ const BROWSER_SETS = {
   browserstack: { label: 'BrowserStack: Safari and Chrome on a Mac', projects: ['bs-mac-safari', 'bs-mac-chrome'] },
 };
 const browserTests = playwrightSuites;
-let browserSets = args.browsers ? String(args.browsers).toLowerCase().split(',') : null;
+// --projects=chromium,mobile-chrome picks exact Playwright projects instead of a browser set.
+let browserSets = args.projects ? [] : args.browsers ? String(args.browsers).toLowerCase().split(',') : null;
 if (browserSets?.includes('all')) browserSets = ['desktop', 'mobile', ...(HAS_BROWSERSTACK ? ['browserstack'] : [])];
 if (!browserSets && browserTests.length && interactive) {
   const options = [
@@ -205,7 +207,11 @@ if (browserSets.includes('browserstack')) {
     process.exit(2);
   }
 }
-const browserProjects = browserTests.length ? browserSets.flatMap((b) => BROWSER_SETS[b].projects) : [];
+const browserProjects = !browserTests.length
+  ? []
+  : args.projects
+    ? String(args.projects).split(',').map((p) => p.trim()).filter(Boolean)
+    : browserSets.flatMap((b) => BROWSER_SETS[b].projects);
 // Default: every browser gets its own run, Allure report and PDF. --together runs them all at once.
 const together = Boolean(args.together);
 
