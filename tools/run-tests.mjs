@@ -319,6 +319,10 @@ function buildReports(slug, title, reportPlaywright, resultsDir = 'allure-result
   let allureDir = null;
   if (reportPlaywright) {
     allureDir = slug ? `allure-report/by-browser/${slug}` : 'allure-report';
+    // Allure adds to an existing output folder instead of replacing it, so every run used to pile up another
+    // full set of screenshots (80 GB by November). Start each report from an empty folder.
+    if (slug) rmSync(allureDir, { recursive: true, force: true });
+    else for (const view of ['all-tests', 'desktop', 'mobile', 'charts', 'api']) rmSync(`allure-report/${view}`, { recursive: true, force: true });
     if (run(`npx allure generate ${resultsDir} --output ${allureDir} --name "${title}"`) !== 0) allureDir = null;
   }
   const pdfRun = spawnSync('node tools/report-pdf.mjs', {
