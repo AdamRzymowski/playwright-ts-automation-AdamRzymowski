@@ -70,7 +70,7 @@ and KNOWN-ISSUES.md for open site bugs.
 
 ## Conventions
 - Specs import `test` and `expect` from `fixtures/monsters.ts`,
-  never from `@playwright/test`: that `expect` screenshots every assertion (✓ passed / ✗ failed) and the
+  never from `@playwright/test`: that `expect` screenshots every assertion (✓ passed / ✗ failed; small JPEGs, repeats noted as text) and the
   fixtures add step screenshots, Desktop/Mobile labels and FormSubmit blocking.
 - Page object: `pages/monsters/MonstersPage.ts` (`site`) built from parts in `pages/monsters/components/`.
   Use `site.header`, `site.gallery`, `site.lightbox`, `site.form`, `site.dialog` and `site.footer`; EN/PL

@@ -161,11 +161,11 @@ export default defineConfig({
     /* Headless by default; HEADED=1 / --headed (npm run tests asks) shows the browser windows. */
     headless: !process.env.HEADED,
     /*
-     * Evidence for every test: a full-page screenshot at the end, whether it passed or failed.
-     * Named test.step() blocks also get an "after step" screenshot (fixtures/base.ts).
-     * Video: failures only by default; CAPTURE_ALL=1 (npm run report:full) keeps every video.
+     * Evidence: every step and assertion attaches a small screenshot (fixtures/base.ts). A full-page screenshot is
+     * added for failed tests; CAPTURE_ALL=1 (npm run report:full) adds one at the end of every test and keeps
+     * every video. Video otherwise only for failures.
      */
-    screenshot: { mode: 'on', fullPage: true },
+    screenshot: { mode: process.env.CAPTURE_ALL ? 'on' : 'only-on-failure', fullPage: true },
     video: process.env.CAPTURE_ALL ? 'on' : 'retain-on-failure',
     trace: 'retain-on-failure',
   },

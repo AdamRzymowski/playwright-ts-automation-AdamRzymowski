@@ -1,7 +1,9 @@
 import { defineConfig } from 'allure';
 
-/** Tests are labelled Desktop or Mobile by fixtures/base.ts. */
-const platformIs = (platform) => (tr) => tr.labels.some((l) => l.name === 'platform' && l.value === platform);
+/*
+ * Tests are labelled Desktop or Mobile by fixtures/base.ts (parentSuite), so "All tests" opens with a Desktop and a
+ * Mobile group. Separate Desktop/Mobile views were removed: each held another full copy of every screenshot.
+ */
 const groupBy = ['parentSuite', 'epic', 'feature', 'story'];
 
 /*
@@ -18,14 +20,6 @@ export default defineConfig({
     'all-tests': {
       import: '@allurereport/plugin-awesome',
       options: { reportName: 'All tests', reportLanguage: 'en', groupBy },
-    },
-    desktop: {
-      import: '@allurereport/plugin-awesome',
-      options: { reportName: 'Desktop tests', reportLanguage: 'en', groupBy, filter: platformIs('Desktop') },
-    },
-    mobile: {
-      import: '@allurereport/plugin-awesome',
-      options: { reportName: 'Mobile tests', reportLanguage: 'en', groupBy, filter: platformIs('Mobile') },
     },
     charts: {
       import: '@allurereport/plugin-dashboard',

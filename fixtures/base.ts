@@ -1,4 +1,5 @@
 import { test as base, expect as baseExpect, type Page } from '@playwright/test';
+import { createHash } from 'node:crypto';
 import * as allure from 'allure-js-commons';
 
 export type Platform = 'Desktop' | 'Mobile';
@@ -26,27 +27,42 @@ export const test = base.extend<{ platformLabel: void }>({
   ],
 });
 
-// ---- Step screenshots ------------------------------------------------------------------------
-// Playwright already saves a screenshot at the end of every test (config: screenshot 'on').
-// These add one after each named test.step(), so the report shows what the page looked like when
-// each group of assertions passed, not only the final state.
+// ---- Evidence screenshots (steps and assertions) ------------------------------------------------
+// One screenshot after each named test.step() and one per assertion, so the report shows what the page looked
+// like at every check. To keep reports small:
+// - compressed JPEG of the visible screen at normal pixel density (phones would otherwise be 2.6x larger);
+// - when the screen hasn't changed since this test's previous screenshot, a one-line text note is attached
+//   instead of the same image again, so every check still appears in the report.
+// Playwright adds a full-page screenshot when a test fails (config: screenshot 'only-on-failure').
 
 let activePage: Page | undefined;
+/** Hash of the last screenshot attached per test, to skip identical images. */
+const lastShot = new Map<string, string>();
 
 /** Called by the site fixtures so step screenshots know which page to capture. */
 export function setActivePage(page: Page | undefined) {
   activePage = page;
 }
 
-async function attachStepScreenshot(title: string) {
+async function attachScreenshot(name: string) {
   if (!activePage || activePage.isClosed()) return;
   try {
-    const body = await activePage.screenshot({ fullPage: true });
-    await base.info().attach(`after step: ${title}`, { body, contentType: 'image/png' });
+    const info = base.info();
+    const body = await activePage.screenshot({ type: 'jpeg', quality: 50, scale: 'css' });
+    const hash = createHash('sha1').update(body).digest('hex');
+    const key = `${info.testId}#${info.retry}`;
+    if (lastShot.get(key) === hash) {
+      await info.attach(`${name} (same screen as the previous screenshot)`, { body: 'Screen unchanged since the previous screenshot.', contentType: 'text/plain' });
+      return;
+    }
+    lastShot.set(key, hash);
+    await info.attach(name, { body, contentType: 'image/jpeg' });
   } catch {
-    // A screenshot must never fail a test (e.g. the page is navigating).
+    // Evidence-taking must never fail a test (page closed or navigating).
   }
 }
+
+const attachStepScreenshot = (title: string) => attachScreenshot(`after step: ${title}`);
 
 /** Wraps test.step so every step that completes attaches an "after step" screenshot inside the step. */
 export function withStepScreenshots<T>(t: T): T {
@@ -71,8 +87,8 @@ export function withStepScreenshots<T>(t: T): T {
 
 // ---- Assertion screenshots -------------------------------------------------------------------
 // Proof for every check: each expect(...) assertion, hard or soft, attaches a screenshot of the page
-// labelled "✓ passed" or "✗ failed" with what was checked. Visible-screen JPEGs keep the reports a
-// manageable size. ASSERT_SCREENSHOTS=0 turns them off (e.g. for a quick run).
+// labelled "✓ passed" or "✗ failed" with what was checked (see "Evidence screenshots" above for how they are
+// kept small). ASSERT_SCREENSHOTS=0 turns them off (e.g. for a quick run).
 
 const ASSERT_SCREENSHOTS = process.env.ASSERT_SCREENSHOTS !== '0';
 /** Screenshots still being taken for synchronous assertions; awaited before the test ends. */
@@ -90,13 +106,8 @@ function describeActual(actual: unknown): string {
 }
 
 async function attachAssertionScreenshot(passed: boolean, label: string) {
-  if (!ASSERT_SCREENSHOTS || !activePage || activePage.isClosed()) return;
-  try {
-    const body = await activePage.screenshot({ type: 'jpeg', quality: 60 });
-    await base.info().attach(`${passed ? '✓ passed' : '✗ failed'}: ${label}`, { body, contentType: 'image/jpeg' });
-  } catch {
-    // Never let evidence-taking break a test (page closed or navigating).
-  }
+  if (!ASSERT_SCREENSHOTS) return;
+  await attachScreenshot(`${passed ? '✓ passed' : '✗ failed'}: ${label}`);
 }
 
 /** Wraps a matcher object (from expect(x), expect.soft(x), .not, …) so every matcher call is screenshotted. */

@@ -223,9 +223,10 @@ for the top of the hour.
 | `npm run allure:browsers` | Open the per-browser Allure reports (start page linking each browser's report) |
 | `npm run report` | Open Playwright's built-in HTML report |
 
-The Allure report opens on a start page with four views (set up in `allurerc.mjs`): **All tests**,
-**Desktop tests** and **Mobile tests** (lists grouped by platform / epic / feature, with steps, screenshots,
-videos, traces and attachments) and **Charts** (status, severity and trend charts). Every test is labelled
+The Allure report opens on a start page with two views (set up in `allurerc.mjs`): **All tests** (grouped
+first into **Desktop** and **Mobile**, then epic / feature, with steps, screenshots, videos, traces and
+attachments) and **Charts** (status, severity and trend charts). Separate Desktop and Mobile views were
+removed because each stored another full copy of every screenshot. Every test is labelled
 Desktop or Mobile by `fixtures/base.ts`. Each run starts
 with empty `allure-results/`; run history is kept in `allure-history/`, so trend charts grow with every
 report you generate.
@@ -241,10 +242,16 @@ report you generate.
   - how to check each one (the `@a11y` tests plus manual checks);
   - how to report and log failures.
 - **Titles:** every test is named with a short sentence saying what it checks, e.g. "Quantity 0 is rejected".
-- **Proof screenshots:** every assertion attaches a screenshot to the report, "✓ passed: …" or "✗ failed: …"
-  with what was checked, plus one after each named step and one at the end of each test. They're visible-
-  screen JPEGs to keep reports manageable; set `ASSERT_SCREENSHOTS=0` to skip the per-assertion ones for a quick
-  run.
+- **Proof screenshots:**
+  - Every assertion attaches a screenshot to the report, "✓ passed: …" or "✗ failed: …" with what was
+    checked, plus one after each named step.
+  - To keep reports small, they are compressed JPEGs of the visible screen at normal pixel density: about
+    30–40 KB each instead of up to 4 MB.
+  - When the screen hasn't changed since the test's previous screenshot, a one-line note ("same screen as
+    the previous screenshot") is attached instead of the same image again, so every check is still listed.
+  - Failed tests also get a full-page screenshot, a video and a trace.
+  - `ASSERT_SCREENSHOTS=0` skips the per-assertion screenshots for a quick run; `npm run report:full`
+    (`CAPTURE_ALL=1`) adds a full-page screenshot and video for every test.
 
 ## Known issues
 
@@ -300,7 +307,7 @@ the test code.
 | --- | --- | --- |
 | Allure report (interactive) | `allure-report/` on your PC, history in `allure-history/` | `npm run allure` / `npm run allure:open` |
 | **PDF report** (with charts) | `reports/test-report-<date>_<time>[-<browser>\|-all-browsers].pdf` on your PC (git-ignored) | Created automatically by `npm run tests` (one per browser plus one for all browsers) and by CI (download from the run's artifacts); or `npm run report:pdf` after any run |
-| Screenshots | Inside the Allure and Playwright reports (`test-results/` while running) | **Every test, passed or failed**: a full-page screenshot at the end, plus an "after step" screenshot after each named `test.step()` |
+| Screenshots | Inside the Allure and Playwright reports (`test-results/` while running) | Every assertion and named `test.step()` (small JPEGs, repeats noted as text); a full-page screenshot for failed tests |
 | Videos, traces | Same | Kept for failed tests; `npm run report:full` keeps every video |
 | Testiny | Testiny cloud, Automation tab | Answer *yes* to the Testiny question in `npm run tests`, or `npm run test:testiny` |
 | k6 dashboards | `reports/k6-<test>-report.html` | `npm run perf:smoke` / `perf:load` / `perf:soak` |
