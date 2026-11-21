@@ -1,5 +1,9 @@
 # Playwright TypeScript Automation
 
+> **Moved (21.11.26):** this test project now lives in `tests/` of the site repo,
+> [AdamRzymowski/substandard-monsters](https://github.com/AdamRzymowski/substandard-monsters), with its full
+> history. This repository is kept only as a backup and is no longer updated.
+
 Test automation for the **Substandard Monsters** 3D-printing website (https://substandard-monsters.com,
 repo [substandard-monsters](https://github.com/AdamRzymowski/substandard-monsters)) with
 [Playwright](https://playwright.dev) and TypeScript. It runs on Chrome, Firefox and Edge at desktop and phone
